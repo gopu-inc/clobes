@@ -691,11 +691,11 @@ int cmd_system(int argc, char **argv) {
         return 0;
     } else if (strcmp(argv[2], "processes") == 0) {
         printf("Top processes by CPU usage:\n");
-        system("ps aux --sort=-%cpu | head -20 | awk '{printf "%-10s %-10s %-10s %-10s %-50s\\n", $1, $2, $3, $4, $11}'");
+        system("ps aux --sort=-%cpu | head -20 | awk '{printf \"%-10s %-10s %-10s %-10s %-50s\\n\", $1, $2, $3, $4, $11}'");
         return 0;
     } else if (strcmp(argv[2], "disks") == 0) {
         printf("Disk usage:\n");
-        system("df -h | grep -v 'tmpfs\|udev'");
+        system("df -h | grep -v 'tmpfs\\|udev'");
         return 0;
     } else if (strcmp(argv[2], "memory") == 0) {
         printf("Memory usage:\n");
@@ -703,7 +703,7 @@ int cmd_system(int argc, char **argv) {
         return 0;
     } else if (strcmp(argv[2], "cpu") == 0) {
         printf("CPU information:\n");
-        system("lscpu 2>/dev/null | grep -E '(Model name|CPU\(s\)|MHz|Architecture)' | head -10");
+        system("lscpu 2>/dev/null | grep -E '(Model name|CPU\\(s\\)|MHz|Architecture)' | head -10");
         return 0;
     } else if (strcmp(argv[2], "network") == 0) {
         printf("Network interfaces:\n");
@@ -762,7 +762,7 @@ int cmd_file(int argc, char **argv) {
     
     if (strcmp(argv[2], "find") == 0 && argc >= 5) {
         char cmd[MAX_CMD_LENGTH];
-        snprintf(cmd, sizeof(cmd), "find "%s" -name "%s" -type f 2>/dev/null | head -50", 
+        snprintf(cmd, sizeof(cmd), "find \"%s\" -name \"%s\" -type f 2>/dev/null | head -50", 
                 argv[3], argv[4]);
         print_info("Finding files matching '%s' in %s:", argv[4], argv[3]);
         return system(cmd);
@@ -771,7 +771,7 @@ int cmd_file(int argc, char **argv) {
         if (stat(argv[3], &st) == 0) {
             if (S_ISDIR(st.st_mode)) {
                 char cmd[MAX_CMD_LENGTH];
-                snprintf(cmd, sizeof(cmd), "du -sh "%s"", argv[3]);
+                snprintf(cmd, sizeof(cmd), "du -sh \"%s\"", argv[3]);
                 return system(cmd);
             } else {
                 printf("File:          %s\n", argv[3]);
@@ -795,18 +795,18 @@ int cmd_file(int argc, char **argv) {
         
         char cmd[MAX_CMD_LENGTH * 2];
         if (strcmp(algorithm, "md5") == 0) {
-            snprintf(cmd, sizeof(cmd), "md5sum "%s" 2>/dev/null", argv[3]);
+            snprintf(cmd, sizeof(cmd), "md5sum \"%s\" 2>/dev/null", argv[3]);
         } else if (strcmp(algorithm, "sha1") == 0) {
-            snprintf(cmd, sizeof(cmd), "sha1sum "%s" 2>/dev/null", argv[3]);
+            snprintf(cmd, sizeof(cmd), "sha1sum \"%s\" 2>/dev/null", argv[3]);
         } else {
-            snprintf(cmd, sizeof(cmd), "sha256sum "%s" 2>/dev/null", argv[3]);
+            snprintf(cmd, sizeof(cmd), "sha256sum \"%s\" 2>/dev/null", argv[3]);
         }
         
         return system(cmd);
     } else if (strcmp(argv[2], "compare") == 0 && argc >= 5) {
         print_info("Comparing %s and %s:", argv[3], argv[4]);
         char cmd[MAX_CMD_LENGTH];
-        snprintf(cmd, sizeof(cmd), "cmp -l "%s" "%s" 2>/dev/null | head -20", argv[3], argv[4]);
+        snprintf(cmd, sizeof(cmd), "cmp -l \"%s\" \"%s\" 2>/dev/null | head -20", argv[3], argv[4]);
         int result = system(cmd);
         if (result == 0) {
             print_success("Files are identical");
@@ -815,22 +815,22 @@ int cmd_file(int argc, char **argv) {
     } else if (strcmp(argv[2], "compress") == 0 && argc >= 4) {
         print_info("Compressing %s...", argv[3]);
         char cmd[MAX_CMD_LENGTH];
-        snprintf(cmd, sizeof(cmd), "gzip -k "%s" 2>/dev/null && echo 'Compressed to %s.gz' || echo 'Compression failed'", 
+        snprintf(cmd, sizeof(cmd), "gzip -k \"%s\" 2>/dev/null && echo 'Compressed to %s.gz' || echo 'Compression failed'", 
                 argv[3], argv[3]);
         return system(cmd);
     } else if (strcmp(argv[2], "decompress") == 0 && argc >= 4) {
         print_info("Decompressing %s...", argv[3]);
         char cmd[MAX_CMD_LENGTH];
-        snprintf(cmd, sizeof(cmd), "gunzip -k "%s" 2>/dev/null && echo 'Decompressed successfully' || echo 'Decompression failed'", 
+        snprintf(cmd, sizeof(cmd), "gunzip -k \"%s\" 2>/dev/null && echo 'Decompressed successfully' || echo 'Decompression failed'", 
                 argv[3]);
         return system(cmd);
     } else if (strcmp(argv[2], "stats") == 0 && argc >= 4) {
         print_info("Statistics for %s:", argv[3]);
         
         char cmd[3][MAX_CMD_LENGTH];
-        snprintf(cmd[0], sizeof(cmd[0]), "file "%s"", argv[3]);
-        snprintf(cmd[1], sizeof(cmd[1]), "wc -l "%s" 2>/dev/null | awk '{print \"Lines: \" $1}'", argv[3]);
-        snprintf(cmd[2], sizeof(cmd[2]), "wc -w "%s" 2>/dev/null | awk '{print \"Words: \" $1}'", argv[3]);
+        snprintf(cmd[0], sizeof(cmd[0]), "file \"%s\"", argv[3]);
+        snprintf(cmd[1], sizeof(cmd[1]), "wc -l \"%s\" 2>/dev/null | awk '{print \"Lines: \" $1}'", argv[3]);
+        snprintf(cmd[2], sizeof(cmd[2]), "wc -w \"%s\" 2>/dev/null | awk '{print \"Words: \" $1}'", argv[3]);
         
         for (int i = 0; i < 3; i++) {
             system(cmd[i]);
@@ -870,7 +870,7 @@ int cmd_crypto(int argc, char **argv) {
         if (stat(argv[3], &st) == 0 && S_ISREG(st.st_mode)) {
             char cmd[MAX_CMD_LENGTH];
             snprintf(cmd, sizeof(cmd), 
-                    "echo -n 'MD5: ' && md5sum "%s" 2>/dev/null && echo -n 'SHA256: ' && sha256sum "%s" 2>/dev/null", 
+                    "echo -n 'MD5: ' && md5sum \"%s\" 2>/dev/null && echo -n 'SHA256: ' && sha256sum \"%s\" 2>/dev/null", 
                     argv[3], argv[3]);
             return system(cmd);
         } else {
@@ -965,7 +965,7 @@ int cmd_dev(int argc, char **argv) {
         }
         
         char cmd[MAX_CMD_LENGTH];
-        snprintf(cmd, sizeof(cmd), "gcc -Wall -Wextra -O2 "%s" -o "%s" 2>&1", 
+        snprintf(cmd, sizeof(cmd), "gcc -Wall -Wextra -O2 \"%s\" -o \"%s\" 2>&1", 
                 argv[3], output);
         
         int result = system(cmd);
@@ -983,7 +983,7 @@ int cmd_dev(int argc, char **argv) {
         print_info("Running %s...", argv[3]);
         printf("══════════════════════════════════════════\n");
         char cmd[MAX_CMD_LENGTH];
-        snprintf(cmd, sizeof(cmd), "./"%s"", argv[3]);
+        snprintf(cmd, sizeof(cmd), "./\"%s\"", argv[3]);
         return system(cmd);
     } else if (strcmp(argv[2], "test") == 0) {
         const char *dir = (argc >= 4) ? argv[3] : ".";
@@ -991,7 +991,7 @@ int cmd_dev(int argc, char **argv) {
         
         // Look for test files
         char cmd[MAX_CMD_LENGTH];
-        snprintf(cmd, sizeof(cmd), "find "%s" -name '*test*' -type f -executable 2>/dev/null | head -10", dir);
+        snprintf(cmd, sizeof(cmd), "find \"%s\" -name '*test*' -type f -executable 2>/dev/null | head -10", dir);
         system(cmd);
         return 0;
     } else if (strcmp(argv[2], "format") == 0 && argc >= 4) {
@@ -1003,20 +1003,20 @@ int cmd_dev(int argc, char **argv) {
         
         if (ext) {
             if (strcmp(ext, ".c") == 0 || strcmp(ext, ".h") == 0) {
-                snprintf(cmd, sizeof(cmd), "indent -kr -i8 -ts8 -sob -l80 -ss -ncs "%s" 2>/dev/null && echo 'Formatted with indent' || echo 'Install indent for C formatting'", 
+                snprintf(cmd, sizeof(cmd), "indent -kr -i8 -ts8 -sob -l80 -ss -ncs \"%s\" 2>/dev/null && echo 'Formatted with indent' || echo 'Install indent for C formatting'", 
                         argv[3]);
             } else if (strcmp(ext, ".py") == 0) {
-                snprintf(cmd, sizeof(cmd), "black "%s" 2>/dev/null || autopep8 --in-place "%s" 2>/dev/null || echo 'Install black or autopep8 for Python formatting'", 
+                snprintf(cmd, sizeof(cmd), "black \"%s\" 2>/dev/null || autopep8 --in-place \"%s\" 2>/dev/null || echo 'Install black or autopep8 for Python formatting'", 
                         argv[3], argv[3]);
             } else if (strcmp(ext, ".js") == 0 || strcmp(ext, ".ts") == 0) {
-                snprintf(cmd, sizeof(cmd), "prettier --write "%s" 2>/dev/null || echo 'Install prettier for JavaScript formatting'", 
+                snprintf(cmd, sizeof(cmd), "prettier --write \"%s\" 2>/dev/null || echo 'Install prettier for JavaScript formatting'", 
                         argv[3]);
             } else {
-                snprintf(cmd, sizeof(cmd), "cat "%s" | fmt -w 80 > /tmp/fmt.tmp && mv /tmp/fmt.tmp "%s" && echo 'Basic formatting applied'", 
+                snprintf(cmd, sizeof(cmd), "cat \"%s\" | fmt -w 80 > /tmp/fmt.tmp && mv /tmp/fmt.tmp \"%s\" && echo 'Basic formatting applied'", 
                         argv[3], argv[3]);
             }
         } else {
-            snprintf(cmd, sizeof(cmd), "cat "%s" | fmt -w 80 > /tmp/fmt.tmp && mv /tmp/fmt.tmp "%s"", 
+            snprintf(cmd, sizeof(cmd), "cat \"%s\" | fmt -w 80 > /tmp/fmt.tmp && mv /tmp/fmt.tmp \"%s\"", 
                     argv[3], argv[3]);
         }
         
@@ -1028,9 +1028,9 @@ int cmd_dev(int argc, char **argv) {
         char cmd[MAX_CMD_LENGTH];
         
         if (ext && strcmp(ext, ".c") == 0) {
-            snprintf(cmd, sizeof(cmd), "cppcheck --enable=all "%s" 2>&1 | head -20", argv[3]);
+            snprintf(cmd, sizeof(cmd), "cppcheck --enable=all \"%s\" 2>&1 | head -20", argv[3]);
         } else if (ext && strcmp(ext, ".py") == 0) {
-            snprintf(cmd, sizeof(cmd), "pylint "%s" 2>&1 | tail -20", argv[3]);
+            snprintf(cmd, sizeof(cmd), "pylint \"%s\" 2>&1 | tail -20", argv[3]);
         } else {
             snprintf(cmd, sizeof(cmd), "echo 'Unsupported file type for analysis'");
         }
