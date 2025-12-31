@@ -44,10 +44,16 @@ static GlobalState g_state = {
 static Command g_commands[250]; // Room for 250 commands
 static int g_command_count = 0;
 
+// Memory structure for curl
+typedef struct {
+    char *memory;
+    size_t size;
+} MemoryStruct;
+
 // Write callback for curl
 static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
-    struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+    MemoryStruct *mem = (MemoryStruct *)userp;
     
     char *ptr = realloc(mem->memory, mem->size + realsize + 1);
     if (!ptr) return 0;
@@ -61,7 +67,12 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
 }
 
 // Progress callback for curl
-static int progress_callback(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
+static int progress_callback(void *clientp, double dltotal, double dlnow, 
+                            double ultotal, double ulnow) {
+    (void)clientp;
+    (void)ultotal;
+    (void)ulnow;
+    
     if (g_state.config.progress_bars && dltotal > 0) {
         int bar_width = 50;
         double progress = dlnow / dltotal;
@@ -251,12 +262,6 @@ void print_spinner(const char *message) {
     counter++;
 }
 
-// Memory structure for curl
-struct MemoryStruct {
-    char *memory;
-    size_t size;
-};
-
 // HTTP GET (curl replacement - faster and smarter)
 char* http_get_simple(const char *url) {
     CURL *curl = curl_easy_init();
@@ -265,7 +270,7 @@ char* http_get_simple(const char *url) {
         return NULL;
     }
     
-    struct MemoryStruct chunk = {NULL, 0};
+    MemoryStruct chunk = {NULL, 0};
     struct curl_slist *headers = NULL;
     
     // Set headers
@@ -320,7 +325,7 @@ char* http_post_simple(const char *url, const char *data) {
     CURL *curl = curl_easy_init();
     if (!curl) return NULL;
     
-    struct MemoryStruct chunk = {NULL, 0};
+    MemoryStruct chunk = {NULL, 0};
     struct curl_slist *headers = NULL;
     
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -487,7 +492,7 @@ int cmd_help(int argc, char **argv) {
         
         int found = 0;
         for (int i = 0; i < g_command_count; i++) {
-            if (g_commands[i].category == cat) {
+            if (g_commands[i].category == (Category)cat) {
                 printf("  %-20s - %s\n", 
                        g_commands[i].name, 
                        g_commands[i].description);
@@ -657,23 +662,23 @@ int cmd_system(int argc, char **argv) {
     }
     
     if (strcmp(argv[2], "info") == 0) {
-        struct utsname sysinfo;
-        if (uname(&sysinfo) == 0) {
+        struct utsname uname_info;
+        if (uname(&uname_info) == 0) {
             printf("System:        %s %s %s\n", 
-                   sysinfo.sysname, sysinfo.release, sysinfo.machine);
-            printf("Hostname:      %s\n", sysinfo.nodename);
+                   uname_info.sysname, uname_info.release, uname_info.machine);
+            printf("Hostname:      %s\n", uname_info.nodename);
         }
         
-        struct sysinfo meminfo;
-        if (sysinfo(&meminfo) == 0) {
+        struct sysinfo mem_info;
+        if (sysinfo(&mem_info) == 0) {
             printf("\nMemory:\n");
-            printf("  Total:       %lu MB\n", meminfo.totalram / 1024 / 1024);
-            printf("  Free:        %lu MB\n", meminfo.freeram / 1024 / 1024);
+            printf("  Total:       %lu MB\n", mem_info.totalram / 1024 / 1024);
+            printf("  Free:        %lu MB\n", mem_info.freeram / 1024 / 1024);
             printf("  Used:        %lu MB (%.1f%%)\n", 
-                   (meminfo.totalram - meminfo.freeram) / 1024 / 1024,
-                   ((meminfo.totalram - meminfo.freeram) * 100.0) / meminfo.totalram);
-            printf("  Swap Total:  %lu MB\n", meminfo.totalswap / 1024 / 1024);
-            printf("  Swap Free:   %lu MB\n", meminfo.freeswap / 1024 / 1024);
+                   (mem_info.totalram - mem_info.freeram) / 1024 / 1024,
+                   ((mem_info.totalram - mem_info.freeram) * 100.0) / mem_info.totalram);
+            printf("  Swap Total:  %lu MB\n", mem_info.totalswap / 1024 / 1024);
+            printf("  Swap Free:   %lu MB\n", mem_info.freeswap / 1024 / 1024);
         }
         
         printf("\nUptime:        ");
@@ -1053,10 +1058,11 @@ void register_commands() {
         .category = CATEGORY_SYSTEM,
         .min_args = 0,
         .max_args = 0,
-        .handler = cmd_version,
-        .aliases = {{"v"}, {"--version"}},
-        .alias_count = 2
+        .handler = cmd_version
     };
+    strcpy(version_cmd.aliases[0], "v");
+    strcpy(version_cmd.aliases[1], "--version");
+    version_cmd.alias_count = 2;
     
     Command help_cmd = {
         .name = "help",
@@ -1065,10 +1071,12 @@ void register_commands() {
         .category = CATEGORY_SYSTEM,
         .min_args = 0,
         .max_args = 1,
-        .handler = cmd_help,
-        .aliases = {{"h"}, {"--help"}, {"?"}},
-        .alias_count = 3
+        .handler = cmd_help
     };
+    strcpy(help_cmd.aliases[0], "h");
+    strcpy(help_cmd.aliases[1], "--help");
+    strcpy(help_cmd.aliases[2], "?");
+    help_cmd.alias_count = 3;
     
     // Network commands
     Command network_cmd = {
@@ -1078,10 +1086,10 @@ void register_commands() {
         .category = CATEGORY_NETWORK,
         .min_args = 1,
         .max_args = 20,
-        .handler = cmd_network,
-        .aliases = {{"net"}},
-        .alias_count = 1
+        .handler = cmd_network
     };
+    strcpy(network_cmd.aliases[0], "net");
+    network_cmd.alias_count = 1;
     
     // System commands
     Command system_cmd = {
@@ -1091,10 +1099,10 @@ void register_commands() {
         .category = CATEGORY_SYSTEM,
         .min_args = 1,
         .max_args = 10,
-        .handler = cmd_system,
-        .aliases = {{"sys"}},
-        .alias_count = 1
+        .handler = cmd_system
     };
+    strcpy(system_cmd.aliases[0], "sys");
+    system_cmd.alias_count = 1;
     
     // File commands
     Command file_cmd = {
@@ -1104,10 +1112,10 @@ void register_commands() {
         .category = CATEGORY_FILE,
         .min_args = 1,
         .max_args = 10,
-        .handler = cmd_file,
-        .aliases = {{"files"}},
-        .alias_count = 1
+        .handler = cmd_file
     };
+    strcpy(file_cmd.aliases[0], "files");
+    file_cmd.alias_count = 1;
     
     // Crypto commands
     Command crypto_cmd = {
@@ -1117,10 +1125,10 @@ void register_commands() {
         .category = CATEGORY_CRYPTO,
         .min_args = 1,
         .max_args = 10,
-        .handler = cmd_crypto,
-        .aliases = {{"crypt"}},
-        .alias_count = 1
+        .handler = cmd_crypto
     };
+    strcpy(crypto_cmd.aliases[0], "crypt");
+    crypto_cmd.alias_count = 1;
     
     // Dev commands
     Command dev_cmd = {
@@ -1130,10 +1138,10 @@ void register_commands() {
         .category = CATEGORY_DEV,
         .min_args = 1,
         .max_args = 10,
-        .handler = cmd_dev,
-        .aliases = {{"develop"}},
-        .alias_count = 1
+        .handler = cmd_dev
     };
+    strcpy(dev_cmd.aliases[0], "develop");
+    dev_cmd.alias_count = 1;
     
     // Add commands to registry
     g_commands[g_command_count++] = version_cmd;
