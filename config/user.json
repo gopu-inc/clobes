@@ -1,0 +1,34 @@
+{
+    "user": {
+        "name": "$USER",
+        "editor": "vim",
+        "pager": "less"
+    },
+    "network": {
+        "proxy": "",
+        "timeout": 30,
+        "retries": 3,
+        "user_agent": "CLOBES-PRO/4.0.0"
+    },
+    "ui": {
+        "colors": true,
+        "progress_bars": true,
+        "emoji": true,
+        "verbose": false
+    },
+    "features": {
+        "auto_update_check": true,
+        "enable_analytics": false,
+        "enable_telemetry": false
+    },
+    "aliases": {
+        "cg": "network get",
+        "cpost": "network post",
+        "cdl": "network download",
+        "cping": "network ping",
+        "cinfo": "system info",
+        "cfind": "file find",
+        "chash": "file hash",
+        "ccompile": "dev compile"
+    }
+}

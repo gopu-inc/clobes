@@ -1,0 +1,34 @@
+{
+    "name": "clobes-pro",
+    "version": "4.0.0",
+    "author": "Zenv Pro Team",
+    "license": "MIT",
+    "description": "Ultimate Command Line Toolkit - 200+ commands, replaces curl+wget+dig+ping+gcc+more",
+    "build_dir": ".",
+    "output": "clobes-pro-4.0.0.zv",
+    "include": [
+        "src/",
+        "bin/",
+        "lib/",
+        "modules/",
+        "plugins/",
+        "Makefile",
+        "@za.json",
+        "install.sh",
+        "quickstart.sh",
+        "clobes-completion.bash",
+        "config/",
+        "completion/",
+        "man/",
+        "examples/"
+    ],
+    "exclude": [
+        "*.tmp",
+        "*.log",
+        "*.o",
+        "__pycache__",
+        "node_modules",
+        ".git",
+        ".vscode"
+    ]
+}

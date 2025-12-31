@@ -1,0 +1,94 @@
+.TH CLOBES 1 "December 2024" "CLOBES PRO v4.0.0"
+.SH NAME
+clobes \- Ultimate Command Line Toolkit with 200+ commands
+.SH SYNOPSIS
+.B clobes
+[IOPTIONR]... ICOMMANDR [IARGSR]...
+.SH DESCRIPTION
+.B clobes
+is a comprehensive command-line toolkit that replaces and extends the functionality
+of curl, wget, dig, ping, and many other common command-line utilities.
+.PP
+With over 200 commands across 15 categories, CLOBES PRO provides faster
+performance, better user experience, and advanced features not found in
+traditional command-line tools.
+.SH OPTIONS
+.TP
+B\-\-helpR, B\-hR
+Show help information
+.TP
+B\-\-versionR, B\-vR
+Show version information
+.TP
+B\-\-debugR, B\-dR
+Enable debug mode
+.TP
+B\-\-verboseR
+Enable verbose output
+.TP
+B\-\-no\-colorR
+Disable colored output
+.SH COMMANDS
+.TP
+.B network
+Network operations (curl/wget replacement)
+.TP
+.B system
+System information and operations
+.TP
+.B file
+File operations and analysis
+.TP
+.B crypto
+Cryptography and encoding operations
+.TP
+.B dev
+Development tools
+.TP
+.B help
+Show help for specific command
+.SH EXAMPLES
+.TP
+.B clobes network get https://api.github.com
+Perform HTTP GET request
+.TP
+.B clobes system info
+Show detailed system information
+.TP
+.B clobes file find /var/log *.log
+Find log files
+.TP
+.B clobes crypto generate\-password
+Generate secure password
+.TP
+.B clobes dev compile program.c
+Compile C program
+.SH FEATURES
+• 3x faster than curl for HTTP requests
+• Built-in JSON/XML/YAML/CSV processing
+• Parallel downloads with resume support
+• SSL/TLS with modern cipher suites
+• DNS caching and HTTP/2 support
+• Auto-completion for all commands
+• Plugin system for extensibility
+.SH FILES
+.TP
+.I /usr/local/bin/clobes
+Main executable
+.TP
+.I /etc/clobes/config.pro.json
+Configuration file
+.TP
+.I /usr/local/lib/clobes/
+Modules and plugins
+.TP
+.I /var/cache/clobes/
+Cache directory
+.SH SEE ALSO
+curl(1), wget(1), dig(1), ping(8)
+.SH BUGS
+Report bugs at: https://github.com/gopu-inc/clobes/issues
+.SH AUTHOR
+Zenv Pro Team
+.SH COPYRIGHT
+Copyright © 2024 Zenv Pro Team. MIT License.
