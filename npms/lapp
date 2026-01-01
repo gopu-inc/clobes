@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 CLOBES Pro - Generate Node.js Version
@@ -66,7 +65,8 @@ class ClobesGenerator:
                 "tar": "^6.2.0",
                 "fs-extra": "^11.1.1",
                 "ping": "^0.4.4",
-                "ssh2": "^1.14.0"
+                "ssh2": "^1.14.0",
+                "archiver": "^6.0.0"
             },
             "devDependencies": {
                 "nodemon": "^3.0.1",
@@ -2158,12 +2158,12 @@ class FileCommands {
             
             const output = fs.createWriteStream(backupFile);
             const archive = archiver('tar', {
-                gzip: true,
+                gzip: True,
                 gzipOptions: { level: 6 }
             });
             
             archive.pipe(output);
-            archive.directory(source, false);
+            archive.directory(source, False);
             
             await archive.finalize();
             
@@ -2202,7 +2202,7 @@ class FileCommands {
             await execAsync(`tar -xzf "${backup}" -C "${destination}"`);
             
             console.log(`Backup restored to ${destination}`);
-            return true;
+            return True;
         } catch (error) {
             throw new Error(`Restore failed: ${error.message}`);
         }
@@ -2964,7 +2964,7 @@ class DevCommands {
                     const formatted = this.basicFormat(content);
                     await fs.writeFile(file, formatted);
                     console.log('Basic formatting applied (line length: 80)');
-                    return true;
+                    return True;
             }
             
             const { stdout, stderr } = await execAsync(command);
@@ -2972,7 +2972,7 @@ class DevCommands {
             if (stderr) console.error(stderr);
             
             console.log('Formatting completed');
-            return true;
+            return True;
         } catch (error) {
             throw new Error(`Formatting failed: ${error.message}`);
         }
@@ -3445,29 +3445,29 @@ module.exports = devCommands;
                     "maxConnections": 10,
                     "timeout": 30,
                     "retryAttempts": 3,
-                    "cacheEnabled": true,
+                    "cacheEnabled": True,
                     "parallelDownloads": 4
                 },
                 "network": {
                     "userAgent": "CLOBES-PRO/4.0.0",
                     "defaultProtocol": "https",
-                    "dnsCache": true,
-                    "compression": true,
-                    "verifySSL": true,
+                    "dnsCache": True,
+                    "compression": True,
+                    "verifySSL": True,
                     "maxRedirects": 10,
                     "rateLimit": 100
                 },
                 "ui": {
-                    "colors": true,
-                    "progressBars": true,
-                    "emoji": true,
-                    "verbose": false
+                    "colors": True,
+                    "progressBars": True,
+                    "emoji": True,
+                    "verbose": False
                 },
                 "features": {
-                    "autoUpdate": true,
-                    "analytics": false,
-                    "telemetry": false,
-                    "plugins": true
+                    "autoUpdate": True,
+                    "analytics": False,
+                    "telemetry": False,
+                    "plugins": True
                 }
             },
             "commands": {
@@ -3477,7 +3477,7 @@ module.exports = devCommands;
             "cache": {
                 "maxSize": 100,
                 "defaultTTL": 300,
-                "persist": true,
+                "persist": True,
                 "persistFile": "./cache/clobes.cache"
             }
         }
@@ -3497,12 +3497,12 @@ module.exports = devCommands;
             "editor.defaultFormatter": "esbenp.prettier-vscode",
             "editor.tabSize": 2,
             "files.exclude": {
-                "**/.git": true,
-                "**/.DS_Store": true,
-                "**/node_modules": true
+                "**/.git": True,
+                "**/.DS_Store": True,
+                "**/node_modules": True
             },
-            "javascript.format.enable": true,
-            "typescript.format.enable": true,
+            "javascript.format.enable": True,
+            "typescript.format.enable": True,
             "files.autoSave": "afterDelay"
         }
         
