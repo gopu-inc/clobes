@@ -20,7 +20,7 @@ CYAN = \033[0;36m
 MAGENTA = \033[0;35m
 NC = \033[0m
 
-.PHONY: all build release debug install clean test bench profile
+.PHONY: all build release debug install install-user uninstall clean test bench profile docker package help
 
 all: release
 
@@ -49,6 +49,27 @@ install: release
 	@echo "$(GREEN)📦 Installing CLOBES PRO...$(NC)"
 	@chmod +x install.sh
 	@sudo ./install.sh || echo "$(YELLOW)⚠️  Use: sudo make install$(NC)"
+
+install-user: release
+	@echo "$(GREEN)📦 Installing CLOBES PRO for current user...$(NC)"
+	@mkdir -p ~/.local/bin
+	@cp clobes ~/.local/bin/
+	@chmod 755 ~/.local/bin/clobes
+	@mkdir -p ~/.config/clobes
+	@cp config/user.json ~/.config/clobes/config.pro.json 2>/dev/null || \
+		echo '{"ui":{"colors":true}}' > ~/.config/clobes/config.pro.json
+	@if ! echo "$$PATH" | grep -q "$$HOME/.local/bin"; then \
+		echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.bashrc; \
+		echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.profile; \
+		echo "$(BLUE)✓ Added ~/.local/bin to PATH$(NC)"; \
+	fi
+	@echo "$(GREEN)✅ CLOBES PRO installed for current user$(NC)"
+	@echo ""
+	@echo "You may need to restart your shell or run:"
+	@echo "  source ~/.bashrc"
+	@echo ""
+	@echo "Then test with:"
+	@echo "  clobes version"
 
 uninstall:
 	@echo "$(YELLOW)🗑️  Uninstalling...$(NC)"
@@ -99,6 +120,7 @@ help:
 	@echo "  $(GREEN)make release$(NC)    - Optimized release build"
 	@echo "  $(GREEN)make debug$(NC)      - Debug build with symbols"
 	@echo "  $(GREEN)make install$(NC)    - Install system-wide"
+	@echo "  $(GREEN)make install-user$(NC) - Install for current user"
 	@echo "  $(GREEN)make uninstall$(NC)  - Uninstall from system"
 	@echo "  $(GREEN)make clean$(NC)      - Clean build files"
 	@echo "  $(GREEN)make test$(NC)       - Run basic tests"
@@ -111,45 +133,3 @@ help:
 	@echo "$(YELLOW)CLOBES PRO v4.0.0 - Ultimate CLI Toolkit$(NC)"
 
 .DEFAULT_GOAL := help
-
-install-user:
-@echo "$(GREEN)📦 Installing CLOBES PRO for current user...$(NC)"
-@mkdir -p ~/.local/bin
-@cp clobes ~/.local/bin/
-@chmod 755 ~/.local/bin/clobes
-@mkdir -p ~/.config/clobes
-@cp config/user.json ~/.config/clobes/config.pro.json 2>/dev/null || \\
-echo '{"ui":{"colors":true}}' > ~/.config/clobes/config.pro.json
-@if ! echo "$$PATH" | grep -q "$$HOME/.local/bin"; then \\
-echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.bashrc; \\
-echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.profile; \\
-echo "$(BLUE)✓ Added ~/.local/bin to PATH$(NC)"; \\
-fi
-@echo "$(GREEN)✅ CLOBES PRO installed for current user$(NC)"
-@echo ""
-@echo "You may need to restart your shell or run:"
-@echo "  source ~/.bashrc"
-@echo ""
-@echo "Then test with:"
-@echo "  clobes version"
-
-install-user:
-@echo "$(GREEN)📦 Installing CLOBES PRO for current user...$(NC)"
-@mkdir -p ~/.local/bin
-@cp clobes ~/.local/bin/
-@chmod 755 ~/.local/bin/clobes
-@mkdir -p ~/.config/clobes
-@cp config/user.json ~/.config/clobes/config.pro.json 2>/dev/null || \\
-echo '{"ui":{"colors":true}}' > ~/.config/clobes/config.pro.json
-@if ! echo "$$PATH" | grep -q "$$HOME/.local/bin"; then \\
-echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.bashrc; \\
-echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.profile; \\
-echo "$(BLUE)✓ Added ~/.local/bin to PATH$(NC)"; \\
-fi
-@echo "$(GREEN)✅ CLOBES PRO installed for current user$(NC)"
-@echo ""
-@echo "You may need to restart your shell or run:"
-@echo "  source ~/.bashrc"
-@echo ""
-@echo "Then test with:"
-@echo "  clobes version"
