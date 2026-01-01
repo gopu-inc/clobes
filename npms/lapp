@@ -1,1 +1,3622 @@
-iea
+
+#!/usr/bin/env python3
+"""
+CLOBES Pro - Generate Node.js Version
+Script pour générer toute la structure de fichiers et dossiers
+"""
+
+import os
+import json
+from pathlib import Path
+from datetime import datetime
+
+class ClobesGenerator:
+    def __init__(self, base_path="clobes-pro"):
+        self.base_path = Path(base_path)
+        
+    def create_directory_structure(self):
+        """Crée toute la structure de dossiers"""
+        directories = [
+            "bin",
+            "src/commands",
+            "src/utils",
+            "src/lib",
+            "config",
+            "plugins",
+            "logs",
+            ".vscode"
+        ]
+        
+        print("📁 Création de la structure de dossiers...")
+        for directory in directories:
+            path = self.base_path / directory
+            path.mkdir(parents=True, exist_ok=True)
+            print(f"  ✓ {directory}")
+        
+        return True
+    
+    def create_package_json(self):
+        """Crée le fichier package.json"""
+        content = {
+            "name": "clobes-pro",
+            "version": "4.0.0",
+            "description": "CLOBES PRO - Ultimate CLI Toolkit",
+            "main": "src/index.js",
+            "bin": {
+                "clobes": "./bin/clobes.js"
+            },
+            "scripts": {
+                "start": "node bin/clobes.js",
+                "dev": "nodemon bin/clobes.js",
+                "test": "jest"
+            },
+            "keywords": ["cli", "toolkit", "network", "system"],
+            "author": "CLOBES Team",
+            "license": "MIT",
+            "dependencies": {
+                "axios": "^1.6.0",
+                "commander": "^11.0.0",
+                "chalk": "^5.3.0",
+                "ora": "^7.0.1",
+                "cli-table3": "^0.6.3",
+                "progress": "^2.0.3",
+                "yaml": "^2.3.4",
+                "moment": "^2.29.4",
+                "crypto-js": "^4.1.1",
+                "tar": "^6.2.0",
+                "fs-extra": "^11.1.1",
+                "ping": "^0.4.4",
+                "ssh2": "^1.14.0"
+            },
+            "devDependencies": {
+                "nodemon": "^3.0.1",
+                "jest": "^29.7.0",
+                "@types/node": "^20.9.0"
+            }
+        }
+        
+        filepath = self.base_path / "package.json"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(content, f, indent=2)
+        
+        print(f"✓ package.json créé")
+        return True
+    
+    def create_cli_entry(self):
+        """Crée le point d'entrée CLI"""
+        content = '''#!/usr/bin/env node
+
+const { program } = require('commander');
+const chalk = require('chalk');
+const main = require('../src/index');
+
+// Banner
+function printBanner() {
+    console.log(chalk.cyan(`
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║   🚀 C L O B E S  P R O  v4.0.0                              ║
+║   Ultimate Command Line Toolkit                              ║
+║   200+ commands • Faster than curl • Smarter                 ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+    `));
+}
+
+// Main CLI
+program
+    .name('clobes')
+    .description('CLOBES PRO - Ultimate CLI Toolkit')
+    .version('4.0.0')
+    .option('-d, --debug', 'Enable debug mode')
+    .option('-v, --verbose', 'Enable verbose output')
+    .option('--no-color', 'Disable colors');
+
+// Network commands
+program
+    .command('network')
+    .description('Network operations')
+    .argument('<command>', 'Network command')
+    .argument('[args...]', 'Command arguments')
+    .action((command, args) => {
+        require('../src/commands/network').execute(command, args);
+    });
+
+// System commands
+program
+    .command('system')
+    .description('System operations')
+    .argument('<command>', 'System command')
+    .argument('[args...]', 'Command arguments')
+    .action((command, args) => {
+        require('../src/commands/system').execute(command, args);
+    });
+
+// File commands
+program
+    .command('file')
+    .description('File operations')
+    .argument('<command>', 'File command')
+    .argument('[args...]', 'Command arguments')
+    .action((command, args) => {
+        require('../src/commands/file').execute(command, args);
+    });
+
+// Crypto commands
+program
+    .command('crypto')
+    .description('Cryptography operations')
+    .argument('<command>', 'Crypto command')
+    .argument('[args...]', 'Command arguments')
+    .action((command, args) => {
+        require('../src/commands/crypto').execute(command, args);
+    });
+
+// Dev commands
+program
+    .command('dev')
+    .description('Development tools')
+    .argument('<command>', 'Dev command')
+    .argument('[args...]', 'Command arguments')
+    .action((command, args) => {
+        require('../src/commands/dev').execute(command, args);
+    });
+
+// Version command
+program
+    .command('version')
+    .description('Show version information')
+    .action(() => {
+        printBanner();
+        console.log(`Version: 4.0.0 "Thunderbolt"`);
+        console.log(`Build: ${new Date().toISOString()}`);
+    });
+
+// Help command
+program
+    .command('help')
+    .description('Show help information')
+    .argument('[command]', 'Command to get help for')
+    .action((cmd) => {
+        if (cmd) {
+            // Show specific command help
+        } else {
+            printBanner();
+            console.log(chalk.cyan('Available categories:'));
+            console.log('  network  - Network operations');
+            console.log('  system   - System operations');
+            console.log('  file     - File operations');
+            console.log('  crypto   - Cryptography');
+            console.log('  dev      - Development tools');
+            console.log(chalk.cyan('\nExamples:'));
+            console.log('  clobes network get https://api.github.com');
+            console.log('  clobes system info');
+            console.log('  clobes file find /var/log *.log');
+        }
+    });
+
+// Parse arguments
+program.parse(process.argv);
+'''
+        
+        filepath = self.base_path / "bin" / "clobes.js"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        # Make executable on Unix systems
+        os.chmod(filepath, 0o755)
+        print(f"✓ bin/clobes.js créé")
+        return True
+    
+    def create_index_js(self):
+        """Crée le fichier index.js principal"""
+        content = '''const fs = require('fs');
+const path = require('path');
+const chalk = require('chalk');
+const ora = require('ora');
+
+// Global state
+const globalState = {
+    config: {
+        maxConnections: 10,
+        timeout: 30,
+        retryAttempts: 3,
+        cacheEnabled: true,
+        userAgent: 'CLOBES-PRO/4.0.0',
+        colors: true,
+        progressBars: true,
+        verbose: false
+    },
+    cache: new Map(),
+    cacheHits: 0,
+    cacheMisses: 0,
+    totalRequests: 0,
+    totalRequestTime: 0,
+    debugMode: false
+};
+
+// Logger
+const logger = {
+    success: (message) => console.log(chalk.green('✓ ') + message),
+    error: (message) => console.error(chalk.red('✗ ') + message),
+    warning: (message) => console.log(chalk.yellow('⚠ ') + message),
+    info: (message) => console.log(chalk.blue('ℹ ') + message),
+    debug: (message) => {
+        if (globalState.debugMode) {
+            console.log(chalk.magenta('🔧 ') + message);
+        }
+    }
+};
+
+// HTTP Client
+const http = require('./utils/http');
+
+// Cache system
+const cache = require('./lib/cache');
+
+// Command registry
+const commands = new Map();
+
+// Register command
+function registerCommand(name, handler, options = {}) {
+    commands.set(name, { handler, ...options });
+}
+
+// Execute command
+async function executeCommand(name, args) {
+    const command = commands.get(name);
+    if (!command) {
+        logger.error(`Command not found: ${name}`);
+        return false;
+    }
+    
+    try {
+        const spinner = ora(`Executing ${name}...`).start();
+        const result = await command.handler(args, { logger, http, cache, state: globalState });
+        spinner.succeed(`Command ${name} completed`);
+        return result;
+    } catch (error) {
+        logger.error(`Command failed: ${error.message}`);
+        return false;
+    }
+}
+
+// Initialize
+async function init() {
+    logger.info('Initializing CLOBES Pro v4.0.0');
+    
+    // Load configuration
+    const configPath = path.join(__dirname, '../config/default.json');
+    if (fs.existsSync(configPath)) {
+        try {
+            const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            Object.assign(globalState.config, configData);
+            logger.debug('Configuration loaded');
+        } catch (error) {
+            logger.warning('Failed to load configuration, using defaults');
+        }
+    }
+    
+    // Initialize cache
+    cache.init(globalState.config.cacheEnabled);
+    
+    // Register commands
+    require('./commands/network').register(registerCommand);
+    require('./commands/system').register(registerCommand);
+    require('./commands/file').register(registerCommand);
+    require('./commands/crypto').register(registerCommand);
+    require('./commands/dev').register(registerCommand);
+    
+    logger.success('CLOBES Pro initialized');
+    return true;
+}
+
+// Cleanup
+function cleanup() {
+    cache.cleanup();
+    logger.info('CLOBES Pro cleanup completed');
+}
+
+module.exports = {
+    init,
+    cleanup,
+    executeCommand,
+    logger,
+    http,
+    cache,
+    state: globalState
+};
+'''
+        
+        filepath = self.base_path / "src" / "index.js"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✓ src/index.js créé")
+        return True
+    
+    def create_http_util(self):
+        """Crée le module HTTP"""
+        content = '''const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const { Transform } = require('stream');
+
+class HTTPClient {
+    constructor(config) {
+        this.config = config || {};
+        this.instance = axios.create({
+            timeout: this.config.timeout || 30000,
+            maxRedirects: this.config.maxRedirects || 10,
+            headers: {
+                'User-Agent': this.config.userAgent || 'CLOBES-PRO/4.0.0',
+                'Accept': 'application/json',
+                'Accept-Encoding': 'gzip, deflate'
+            }
+        });
+    }
+
+    // GET request
+    async get(url, options = {}) {
+        try {
+            const startTime = Date.now();
+            const response = await this.instance.get(url, options);
+            const endTime = Date.now();
+            
+            return {
+                data: response.data,
+                status: response.status,
+                headers: response.headers,
+                time: endTime - startTime,
+                size: JSON.stringify(response.data).length
+            };
+        } catch (error) {
+            throw new Error(`HTTP GET failed: ${error.message}`);
+        }
+    }
+
+    // POST request
+    async post(url, data, options = {}) {
+        try {
+            const startTime = Date.now();
+            const response = await this.instance.post(url, data, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                ...options
+            });
+            const endTime = Date.now();
+            
+            return {
+                data: response.data,
+                status: response.status,
+                headers: response.headers,
+                time: endTime - startTime,
+                size: JSON.stringify(response.data).length
+            };
+        } catch (error) {
+            throw new Error(`HTTP POST failed: ${error.message}`);
+        }
+    }
+
+    // Download file with progress
+    async download(url, outputPath, onProgress = null) {
+        return new Promise((resolve, reject) => {
+            axios({
+                method: 'GET',
+                url: url,
+                responseType: 'stream'
+            }).then(response => {
+                const totalSize = parseInt(response.headers['content-length'], 10);
+                let downloadedSize = 0;
+                const startTime = Date.now();
+                
+                const writer = fs.createWriteStream(outputPath);
+                
+                response.data.on('data', (chunk) => {
+                    downloadedSize += chunk.length;
+                    if (onProgress && totalSize) {
+                        const percent = (downloadedSize / totalSize * 100).toFixed(2);
+                        const speed = downloadedSize / ((Date.now() - startTime) / 1000);
+                        onProgress(percent, downloadedSize, totalSize, speed);
+                    }
+                });
+                
+                response.data.pipe(writer);
+                
+                writer.on('finish', () => {
+                    const endTime = Date.now();
+                    resolve({
+                        path: outputPath,
+                        size: downloadedSize,
+                        time: endTime - startTime,
+                        success: true
+                    });
+                });
+                
+                writer.on('error', reject);
+            }).catch(reject);
+        });
+    }
+
+    // Batch requests
+    async batch(requests, concurrent = 5) {
+        const results = [];
+        for (let i = 0; i < requests.length; i += concurrent) {
+            const batch = requests.slice(i, i + concurrent);
+            const batchResults = await Promise.allSettled(
+                batch.map(req => this.get(req.url, req.options))
+            );
+            results.push(...batchResults);
+        }
+        return results;
+    }
+
+    // Benchmark
+    async benchmark(url, requests = 100, concurrent = 10) {
+        console.log(`Benchmarking ${url} with ${requests} requests...`);
+        
+        const times = [];
+        const errors = [];
+        const startTime = Date.now();
+        
+        for (let i = 0; i < requests; i += concurrent) {
+            const batch = [];
+            for (let j = 0; j < concurrent && (i + j) < requests; j++) {
+                batch.push(this.get(url).catch(error => ({ error })));
+            }
+            
+            const results = await Promise.all(batch);
+            results.forEach(result => {
+                if (result.error) {
+                    errors.push(result.error);
+                } else if (result.time) {
+                    times.push(result.time);
+                }
+            });
+        }
+        
+        const endTime = Date.now();
+        const totalTime = endTime - startTime;
+        
+        return {
+            totalRequests: requests,
+            successful: times.length,
+            failed: errors.length,
+            totalTime: totalTime,
+            avgTime: times.reduce((a, b) => a + b, 0) / times.length || 0,
+            minTime: Math.min(...times),
+            maxTime: Math.max(...times),
+            requestsPerSecond: (times.length / totalTime) * 1000
+        };
+    }
+}
+
+// Create default instance
+const defaultClient = new HTTPClient();
+
+module.exports = {
+    HTTPClient,
+    get: (url, options) => defaultClient.get(url, options),
+    post: (url, data, options) => defaultClient.post(url, data, options),
+    download: (url, outputPath, onProgress) => defaultClient.download(url, outputPath, onProgress),
+    benchmark: (url, requests, concurrent) => defaultClient.benchmark(url, requests, concurrent)
+};
+'''
+        
+        filepath = self.base_path / "src" / "utils" / "http.js"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✓ src/utils/http.js créé")
+        return True
+    
+    def create_logger_util(self):
+        """Crée le module logger"""
+        content = '''const chalk = require('chalk');
+const moment = require('moment');
+
+const LOG_LEVELS = {
+    FATAL: 0,
+    ERROR: 1,
+    WARNING: 2,
+    INFO: 3,
+    DEBUG: 4,
+    TRACE: 5
+};
+
+class Logger {
+    constructor(config = {}) {
+        this.config = {
+            colors: true,
+            timestamp: true,
+            level: 'INFO',
+            ...config
+        };
+        this.currentLevel = LOG_LEVELS[this.config.level.toUpperCase()] || LOG_LEVELS.INFO;
+    }
+
+    setLevel(level) {
+        const newLevel = LOG_LEVELS[level.toUpperCase()];
+        if (newLevel !== undefined) {
+            this.currentLevel = newLevel;
+        }
+    }
+
+    formatMessage(level, message, colorFn) {
+        const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
+        const levelStr = level.padEnd(7);
+        
+        if (this.config.colors) {
+            return `${chalk.gray(timestamp)} ${colorFn(levelStr)} ${message}`;
+        } else {
+            return `${timestamp} ${levelStr} ${message}`;
+        }
+    }
+
+    log(level, levelValue, message, colorFn) {
+        if (levelValue <= this.currentLevel) {
+            console.log(this.formatMessage(level, message, colorFn));
+        }
+    }
+
+    fatal(message) {
+        this.log('FATAL', LOG_LEVELS.FATAL, message, chalk.bgRed.white.bold);
+    }
+
+    error(message) {
+        this.log('ERROR', LOG_LEVELS.ERROR, message, chalk.red.bold);
+    }
+
+    warning(message) {
+        this.log('WARNING', LOG_LEVELS.WARNING, message, chalk.yellow);
+    }
+
+    info(message) {
+        this.log('INFO', LOG_LEVELS.INFO, message, chalk.blue);
+    }
+
+    debug(message) {
+        this.log('DEBUG', LOG_LEVELS.DEBUG, message, chalk.magenta);
+    }
+
+    trace(message) {
+        this.log('TRACE', LOG_LEVELS.TRACE, message, chalk.gray);
+    }
+
+    success(message) {
+        if (LOG_LEVELS.INFO <= this.currentLevel) {
+            console.log(this.formatMessage('SUCCESS', message, chalk.green));
+        }
+    }
+
+    progress(current, total, label = '') {
+        if (LOG_LEVELS.INFO <= this.currentLevel) {
+            const percent = Math.round((current / total) * 100);
+            const barLength = 30;
+            const filledLength = Math.round((barLength * current) / total);
+            const bar = '█'.repeat(filledLength) + '░'.repeat(barLength - filledLength);
+            
+            if (this.config.colors) {
+                process.stdout.write(`\r${chalk.cyan(label)} [${bar}] ${percent}% (${current}/${total})`);
+            } else {
+                process.stdout.write(`\r${label} [${bar}] ${percent}% (${current}/${total})`);
+            }
+            
+            if (current >= total) {
+                process.stdout.write('\n');
+            }
+        }
+    }
+
+    spinner(text) {
+        const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+        let i = 0;
+        
+        const interval = setInterval(() => {
+            if (this.config.colors) {
+                process.stdout.write(`\r${chalk.yellow(frames[i])} ${text}`);
+            } else {
+                process.stdout.write(`\r${frames[i]} ${text}`);
+            }
+            i = (i + 1) % frames.length;
+        }, 100);
+        
+        return {
+            stop: (success = true, message = '') => {
+                clearInterval(interval);
+                process.stdout.write('\r');
+                if (message) {
+                    if (success) {
+                        this.success(message);
+                    } else {
+                        this.error(message);
+                    }
+                }
+            }
+        };
+    }
+}
+
+// Default logger instance
+const defaultLogger = new Logger();
+
+module.exports = {
+    Logger,
+    logger: defaultLogger,
+    log: defaultLogger
+};
+'''
+        
+        filepath = self.base_path / "src" / "utils" / "logger.js"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✓ src/utils/logger.js créé")
+        return True
+    
+    def create_cache_lib(self):
+        """Crée le système de cache"""
+        content = '''const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+class CacheEntry {
+    constructor(key, value, ttl = 300000) { // 5 minutes default
+        this.key = key;
+        this.value = value;
+        this.timestamp = Date.now();
+        this.expires = this.timestamp + ttl;
+        this.hits = 0;
+    }
+
+    isExpired() {
+        return Date.now() > this.expires;
+    }
+
+    hit() {
+        this.hits++;
+        return this.value;
+    }
+}
+
+class Cache {
+    constructor(options = {}) {
+        this.options = {
+            maxSize: options.maxSize || 100,
+            defaultTTL: options.defaultTTL || 300000,
+            enabled: options.enabled !== false
+        };
+        this.cache = new Map();
+        this.hits = 0;
+        this.misses = 0;
+        this.stats = {
+            totalSets: 0,
+            totalGets: 0,
+            totalEvictions: 0
+        };
+        
+        // Start cleanup interval
+        if (this.options.enabled) {
+            this.cleanupInterval = setInterval(() => this.cleanup(), 60000); // Clean every minute
+        }
+    }
+
+    // Generate cache key from arguments
+    generateKey(...args) {
+        const str = JSON.stringify(args);
+        return crypto.createHash('md5').update(str).digest('hex');
+    }
+
+    // Set cache entry
+    set(key, value, ttl = null) {
+        if (!this.options.enabled) return;
+        
+        // Evict if cache is full
+        if (this.cache.size >= this.options.maxSize) {
+            this.evict();
+        }
+        
+        const entry = new CacheEntry(key, value, ttl || this.options.defaultTTL);
+        this.cache.set(key, entry);
+        this.stats.totalSets++;
+    }
+
+    // Get cache entry
+    get(key) {
+        if (!this.options.enabled) return null;
+        
+        this.stats.totalGets++;
+        
+        const entry = this.cache.get(key);
+        if (!entry) {
+            this.misses++;
+            return null;
+        }
+        
+        if (entry.isExpired()) {
+            this.cache.delete(key);
+            this.misses++;
+            return null;
+        }
+        
+        this.hits++;
+        return entry.hit();
+    }
+
+    // Delete cache entry
+    delete(key) {
+        this.cache.delete(key);
+    }
+
+    // Clear all cache
+    clear() {
+        this.cache.clear();
+        this.hits = 0;
+        this.misses = 0;
+        this.stats = { totalSets: 0, totalGets: 0, totalEvictions: 0 };
+    }
+
+    // Evict expired or least used entries
+    evict(count = 1) {
+        const entries = Array.from(this.cache.entries());
+        
+        // First, remove expired entries
+        const expired = entries.filter(([key, entry]) => entry.isExpired());
+        expired.forEach(([key]) => this.cache.delete(key));
+        
+        // If still need to evict, remove least used
+        if (this.cache.size >= this.options.maxSize) {
+            const sorted = entries
+                .filter(([key, entry]) => !entry.isExpired())
+                .sort((a, b) => a[1].hits - b[1].hits)
+                .slice(0, count);
+            
+            sorted.forEach(([key]) => this.cache.delete(key));
+            this.stats.totalEvictions += sorted.length;
+        }
+    }
+
+    // Cleanup expired entries
+    cleanup() {
+        let cleaned = 0;
+        for (const [key, entry] of this.cache.entries()) {
+            if (entry.isExpired()) {
+                this.cache.delete(key);
+                cleaned++;
+            }
+        }
+        if (cleaned > 0) {
+            console.log(`Cache cleanup: removed ${cleaned} expired entries`);
+        }
+    }
+
+    // Get cache stats
+    getStats() {
+        const hitRate = this.hits + this.misses > 0 
+            ? (this.hits / (this.hits + this.misses) * 100).toFixed(2)
+            : 0;
+        
+        return {
+            size: this.cache.size,
+            hits: this.hits,
+            misses: this.misses,
+            hitRate: `${hitRate}%`,
+            maxSize: this.options.maxSize,
+            enabled: this.options.enabled,
+            ...this.stats
+        };
+    }
+
+    // Persist cache to disk
+    persist(filePath) {
+        if (!this.options.enabled) return;
+        
+        const data = {
+            entries: Array.from(this.cache.entries()).map(([key, entry]) => ({
+                key,
+                value: entry.value,
+                timestamp: entry.timestamp,
+                expires: entry.expires,
+                hits: entry.hits
+            })),
+            stats: {
+                hits: this.hits,
+                misses: this.misses,
+                ...this.stats
+            }
+        };
+        
+        try {
+            fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+            return true;
+        } catch (error) {
+            console.error('Failed to persist cache:', error);
+            return false;
+        }
+    }
+
+    // Load cache from disk
+    load(filePath) {
+        if (!this.options.enabled) return false;
+        
+        try {
+            if (fs.existsSync(filePath)) {
+                const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                
+                this.cache.clear();
+                data.entries.forEach(item => {
+                    const entry = new CacheEntry(item.key, item.value);
+                    entry.timestamp = item.timestamp;
+                    entry.expires = item.expires;
+                    entry.hits = item.hits;
+                    this.cache.set(item.key, entry);
+                });
+                
+                this.hits = data.stats.hits || 0;
+                this.misses = data.stats.misses || 0;
+                this.stats = data.stats;
+                
+                return true;
+            }
+        } catch (error) {
+            console.error('Failed to load cache:', error);
+        }
+        return false;
+    }
+
+    // Cleanup on exit
+    destroy() {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+        }
+        this.clear();
+    }
+}
+
+// Create default cache instance
+const defaultCache = new Cache();
+
+module.exports = {
+    Cache,
+    cache: defaultCache
+};
+'''
+        
+        filepath = self.base_path / "src" / "lib" / "cache.js"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✓ src/lib/cache.js créé")
+        return True
+    
+    def create_network_command(self):
+        """Crée le module de commandes réseau"""
+        content = '''const http = require('../utils/http');
+const logger = require('../utils/logger').logger;
+const dns = require('dns');
+const net = require('net');
+const { exec } = require('child_process');
+const util = require('util');
+const execAsync = util.promisify(exec);
+
+class NetworkCommands {
+    constructor() {
+        this.commands = new Map();
+        this.registerCommands();
+    }
+
+    registerCommands() {
+        // GET request
+        this.commands.set('get', {
+            handler: this.get,
+            description: 'HTTP GET request',
+            usage: 'get <url> [--json] [--headers]'
+        });
+
+        // POST request
+        this.commands.set('post', {
+            handler: this.post,
+            description: 'HTTP POST request',
+            usage: 'post <url> <data> [--json]'
+        });
+
+        // Download
+        this.commands.set('download', {
+            handler: this.download,
+            description: 'Download file',
+            usage: 'download <url> <output>'
+        });
+
+        // Ping
+        this.commands.set('ping', {
+            handler: this.ping,
+            description: 'Ping host',
+            usage: 'ping <host> [--count=4] [--interval=1]'
+        });
+
+        // Port scan
+        this.commands.set('scan', {
+            handler: this.scan,
+            description: 'Port scan',
+            usage: 'scan <host> <port> [--timeout=1000]'
+        });
+
+        // DNS lookup
+        this.commands.set('dns', {
+            handler: this.dnsLookup,
+            description: 'DNS lookup',
+            usage: 'dns <domain> [--type=A]'
+        });
+
+        // Get public IP
+        this.commands.set('myip', {
+            handler: this.getPublicIP,
+            description: 'Get public IP address',
+            usage: 'myip'
+        });
+
+        // Speed test
+        this.commands.set('speedtest', {
+            handler: this.speedTest,
+            description: 'Internet speed test',
+            usage: 'speedtest'
+        });
+
+        // Benchmark
+        this.commands.set('benchmark', {
+            handler: this.benchmark,
+            description: 'Benchmark URL',
+            usage: 'benchmark <url> [--requests=100] [--concurrent=10]'
+        });
+    }
+
+    // GET request handler
+    async get(args) {
+        const url = args[0];
+        if (!url) {
+            throw new Error('URL is required');
+        }
+
+        const spinner = logger.spinner(`Fetching ${url}`);
+        
+        try {
+            const result = await http.get(url);
+            spinner.stop(true, 'Request completed');
+            
+            console.log(`Status: ${result.status}`);
+            console.log(`Time: ${result.time}ms`);
+            console.log(`Size: ${result.size} bytes`);
+            
+            if (args.includes('--headers')) {
+                console.log('\nHeaders:');
+                Object.entries(result.headers).forEach(([key, value]) => {
+                    console.log(`  ${key}: ${value}`);
+                });
+            }
+            
+            if (args.includes('--json')) {
+                console.log('\nResponse:');
+                console.log(JSON.stringify(result.data, null, 2));
+            } else if (typeof result.data === 'string') {
+                console.log('\nResponse:');
+                console.log(result.data.substring(0, 1000) + (result.data.length > 1000 ? '...' : ''));
+            }
+            
+            return result;
+        } catch (error) {
+            spinner.stop(false, error.message);
+            throw error;
+        }
+    }
+
+    // POST request handler
+    async post(args) {
+        const url = args[0];
+        const data = args[1];
+        
+        if (!url || !data) {
+            throw new Error('URL and data are required');
+        }
+
+        let parsedData;
+        try {
+            parsedData = JSON.parse(data);
+        } catch {
+            parsedData = data;
+        }
+
+        const spinner = logger.spinner(`POST to ${url}`);
+        
+        try {
+            const result = await http.post(url, parsedData);
+            spinner.stop(true, 'POST completed');
+            
+            console.log(`Status: ${result.status}`);
+            console.log(`Time: ${result.time}ms`);
+            
+            if (args.includes('--json')) {
+                console.log('\nResponse:');
+                console.log(JSON.stringify(result.data, null, 2));
+            }
+            
+            return result;
+        } catch (error) {
+            spinner.stop(false, error.message);
+            throw error;
+        }
+    }
+
+    // Download handler
+    async download(args) {
+        const url = args[0];
+        const output = args[1];
+        
+        if (!url || !output) {
+            throw new Error('URL and output path are required');
+        }
+
+        console.log(`Downloading ${url} to ${output}`);
+        
+        try {
+            const result = await http.download(url, output, (percent, downloaded, total, speed) => {
+                const speedMB = (speed / 1024 / 1024).toFixed(2);
+                const downloadedMB = (downloaded / 1024 / 1024).toFixed(2);
+                const totalMB = total ? (total / 1024 / 1024).toFixed(2) : '?';
+                
+                process.stdout.write(`\rProgress: ${percent}% | ${downloadedMB}/${totalMB} MB | ${speedMB} MB/s`);
+            });
+            
+            console.log(`\nDownload completed: ${output}`);
+            console.log(`Size: ${(result.size / 1024 / 1024).toFixed(2)} MB`);
+            console.log(`Time: ${(result.time / 1000).toFixed(2)} seconds`);
+            
+            return result;
+        } catch (error) {
+            console.error(`\nDownload failed: ${error.message}`);
+            throw error;
+        }
+    }
+
+    // Ping handler
+    async ping(args) {
+        const host = args[0];
+        if (!host) {
+            throw new Error('Host is required');
+        }
+
+        const count = this.getOption(args, '--count', 4);
+        const interval = this.getOption(args, '--interval', 1);
+
+        console.log(`Pinging ${host} ${count} times...`);
+        
+        try {
+            const { stdout } = await execAsync(`ping -c ${count} -i ${interval} ${host}`);
+            console.log(stdout);
+            return stdout;
+        } catch (error) {
+            // ping returns error when packets are lost, but we still want output
+            if (error.stdout) {
+                console.log(error.stdout);
+                return error.stdout;
+            }
+            throw new Error(`Ping failed: ${error.message}`);
+        }
+    }
+
+    // Port scan handler
+    async scan(args) {
+        const host = args[0];
+        const port = parseInt(args[1]);
+        
+        if (!host || !port) {
+            throw new Error('Host and port are required');
+        }
+
+        const timeout = this.getOption(args, '--timeout', 1000);
+        
+        return new Promise((resolve) => {
+            const socket = new net.Socket();
+            socket.setTimeout(timeout);
+            
+            socket.on('connect', () => {
+                console.log(`Port ${port} on ${host} is OPEN`);
+                socket.destroy();
+                resolve(true);
+            });
+            
+            socket.on('timeout', () => {
+                console.log(`Port ${port} on ${host} is CLOSED (timeout)`);
+                socket.destroy();
+                resolve(false);
+            });
+            
+            socket.on('error', () => {
+                console.log(`Port ${port} on ${host} is CLOSED`);
+                socket.destroy();
+                resolve(false);
+            });
+            
+            socket.connect(port, host);
+        });
+    }
+
+    // DNS lookup handler
+    async dnsLookup(args) {
+        const domain = args[0];
+        if (!domain) {
+            throw new Error('Domain is required');
+        }
+
+        const type = this.getOption(args, '--type', 'A');
+        
+        console.log(`DNS lookup for ${domain} (${type} records):`);
+        
+        try {
+            switch (type.toUpperCase()) {
+                case 'A':
+                    const addresses = await dns.promises.resolve4(domain);
+                    addresses.forEach(addr => console.log(`  A: ${addr}`));
+                    break;
+                    
+                case 'AAAA':
+                    const ipv6addrs = await dns.promises.resolve6(domain);
+                    ipv6addrs.forEach(addr => console.log(`  AAAA: ${addr}`));
+                    break;
+                    
+                case 'MX':
+                    const mxRecords = await dns.promises.resolveMx(domain);
+                    mxRecords.forEach(record => console.log(`  MX: ${record.exchange} (priority: ${record.priority})`));
+                    break;
+                    
+                case 'TXT':
+                    const txtRecords = await dns.promises.resolveTxt(domain);
+                    txtRecords.forEach(record => console.log(`  TXT: ${record.join('')}`));
+                    break;
+                    
+                default:
+                    throw new Error(`Unsupported DNS type: ${type}`);
+            }
+        } catch (error) {
+            throw new Error(`DNS lookup failed: ${error.message}`);
+        }
+    }
+
+    // Get public IP handler
+    async getPublicIP() {
+        try {
+            const result = await http.get('https://api.ipify.org?format=json');
+            console.log(`Public IP: ${result.data.ip}`);
+            return result.data.ip;
+        } catch (error) {
+            throw new Error(`Failed to get public IP: ${error.message}`);
+        }
+    }
+
+    // Speed test handler
+    async speedTest() {
+        console.log('Running speed test...');
+        
+        // Simple speed test by downloading a test file
+        const testFiles = [
+            'http://ipv4.download.thinkbroadband.com/10MB.zip',
+            'http://ipv4.download.thinkbroadband.com/20MB.zip'
+        ];
+        
+        for (const url of testFiles) {
+            console.log(`\nTesting with ${url}`);
+            
+            try {
+                const startTime = Date.now();
+                const result = await http.get(url);
+                const endTime = Date.now();
+                
+                const timeSeconds = (endTime - startTime) / 1000;
+                const sizeMB = result.size / 1024 / 1024;
+                const speedMbps = (sizeMB * 8) / timeSeconds;
+                
+                console.log(`Downloaded: ${sizeMB.toFixed(2)} MB`);
+                console.log(`Time: ${timeSeconds.toFixed(2)} seconds`);
+                console.log(`Speed: ${speedMbps.toFixed(2)} Mbps`);
+            } catch (error) {
+                console.log(`Speed test failed for ${url}: ${error.message}`);
+            }
+        }
+    }
+
+    // Benchmark handler
+    async benchmark(args) {
+        const url = args[0];
+        if (!url) {
+            throw new Error('URL is required');
+        }
+
+        const requests = this.getOption(args, '--requests', 100);
+        const concurrent = this.getOption(args, '--concurrent', 10);
+        
+        try {
+            const results = await http.benchmark(url, requests, concurrent);
+            
+            console.log('\nBenchmark Results:');
+            console.log('══════════════════════════════════════════');
+            console.log(`URL: ${url}`);
+            console.log(`Total Requests: ${results.totalRequests}`);
+            console.log(`Successful: ${results.successful}`);
+            console.log(`Failed: ${results.failed}`);
+            console.log(`Success Rate: ${((results.successful / results.totalRequests) * 100).toFixed(2)}%`);
+            console.log(`Total Time: ${results.totalTime}ms`);
+            console.log(`Avg Time per Request: ${results.avgTime.toFixed(2)}ms`);
+            console.log(`Min Time: ${results.minTime}ms`);
+            console.log(`Max Time: ${results.maxTime}ms`);
+            console.log(`Requests per Second: ${results.requestsPerSecond.toFixed(2)}`);
+            
+            return results;
+        } catch (error) {
+            throw new Error(`Benchmark failed: ${error.message}`);
+        }
+    }
+
+    // Helper method to get option values
+    getOption(args, optionName, defaultValue) {
+        for (let i = 0; i < args.length; i++) {
+            if (args[i].startsWith(optionName)) {
+                if (args[i].includes('=')) {
+                    return args[i].split('=')[1];
+                } else if (i + 1 < args.length) {
+                    return args[i + 1];
+                }
+            }
+        }
+        return defaultValue;
+    }
+
+    // Execute command
+    async execute(command, args) {
+        const cmd = this.commands.get(command);
+        if (!cmd) {
+            throw new Error(`Unknown network command: ${command}`);
+        }
+        
+        return cmd.handler.call(this, args);
+    }
+
+    // Register with main system
+    register(registerFn) {
+        for (const [name, cmd] of this.commands.entries()) {
+            registerFn(`network.${name}`, async (args, context) => {
+                return this.execute(name, args);
+            }, {
+                description: cmd.description,
+                usage: cmd.usage
+            });
+        }
+    }
+}
+
+// Export singleton instance
+const networkCommands = new NetworkCommands();
+module.exports = networkCommands;
+'''
+        
+        filepath = self.base_path / "src" / "commands" / "network.js"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✓ src/commands/network.js créé")
+        return True
+    
+    def create_system_command(self):
+        """Crée le module de commandes système"""
+        content = '''const os = require('os');
+const fs = require('fs');
+const util = require('util');
+const { exec } = require('child_process');
+const execAsync = util.promisify(exec);
+
+class SystemCommands {
+    constructor() {
+        this.commands = new Map();
+        this.registerCommands();
+    }
+
+    registerCommands() {
+        this.commands.set('info', {
+            handler: this.info,
+            description: 'System information',
+            usage: 'info'
+        });
+
+        this.commands.set('processes', {
+            handler: this.processes,
+            description: 'List processes',
+            usage: 'processes [--top=10]'
+        });
+
+        this.commands.set('users', {
+            handler: this.users,
+            description: 'List users',
+            usage: 'users'
+        });
+
+        this.commands.set('disks', {
+            handler: this.disks,
+            description: 'Disk usage',
+            usage: 'disks'
+        });
+
+        this.commands.set('memory', {
+            handler: this.memory,
+            description: 'Memory usage',
+            usage: 'memory'
+        });
+
+        this.commands.set('cpu', {
+            handler: this.cpu,
+            description: 'CPU information',
+            usage: 'cpu'
+        });
+
+        this.commands.set('network', {
+            handler: this.network,
+            description: 'Network interfaces',
+            usage: 'network'
+        });
+
+        this.commands.set('logs', {
+            handler: this.logs,
+            description: 'View system logs',
+            usage: 'logs [--lines=10]'
+        });
+
+        this.commands.set('clean', {
+            handler: this.clean,
+            description: 'Clean temporary files',
+            usage: 'clean [--all]'
+        });
+
+        this.commands.set('update', {
+            handler: this.update,
+            description: 'Update system packages',
+            usage: 'update'
+        });
+    }
+
+    // System info handler
+    async info() {
+        console.log('System Information:');
+        console.log('══════════════════════════════════════════');
+        
+        console.log(`Hostname: ${os.hostname()}`);
+        console.log(`Platform: ${os.platform()} ${os.arch()}`);
+        console.log(`Release: ${os.release()}`);
+        console.log(`Type: ${os.type()}`);
+        
+        const uptime = this.formatUptime(os.uptime());
+        console.log(`Uptime: ${uptime}`);
+        
+        console.log(`\nCPU: ${os.cpus()[0].model}`);
+        console.log(`Cores: ${os.cpus().length}`);
+        
+        const totalMem = (os.totalmem() / 1024 / 1024 / 1024).toFixed(2);
+        const freeMem = (os.freemem() / 1024 / 1024 / 1024).toFixed(2);
+        const usedMem = (totalMem - freeMem).toFixed(2);
+        console.log(`\nMemory: ${usedMem} GB used / ${freeMem} GB free / ${totalMem} GB total`);
+        
+        const load = os.loadavg();
+        console.log(`Load Average: ${load[0].toFixed(2)}, ${load[1].toFixed(2)}, ${load[2].toFixed(2)}`);
+        
+        console.log(`\nUser: ${os.userInfo().username}`);
+        console.log(`Home: ${os.userInfo().homedir}`);
+        
+        console.log(`\nNetwork Interfaces:`);
+        const interfaces = os.networkInterfaces();
+        Object.keys(interfaces).forEach(iface => {
+            interfaces[iface].forEach(address => {
+                if (address.family === 'IPv4' && !address.internal) {
+                    console.log(`  ${iface}: ${address.address}`);
+                }
+            });
+        });
+    }
+
+    // Processes handler
+    async processes(args) {
+        const top = this.getOption(args, '--top', 10);
+        
+        try {
+            const { stdout } = await execAsync('ps aux --sort=-%cpu');
+            const lines = stdout.split('\n');
+            
+            console.log(`Top ${top} processes by CPU usage:`);
+            console.log('══════════════════════════════════════════');
+            console.log('USER       PID    %CPU   %MEM   COMMAND');
+            console.log('──────────────────────────────────────────');
+            
+            let count = 0;
+            for (let i = 1; i < lines.length && count < top; i++) {
+                const line = lines[i].trim();
+                if (line) {
+                    const parts = line.split(/\s+/);
+                    if (parts.length >= 11) {
+                        console.log(`${parts[0].padEnd(10)} ${parts[1].padEnd(6)} ${parts[2].padEnd(6)} ${parts[3].padEnd(6)} ${parts[10]}`);
+                        count++;
+                    }
+                }
+            }
+        } catch (error) {
+            throw new Error(`Failed to get processes: ${error.message}`);
+        }
+    }
+
+    // Users handler
+    async users() {
+        try {
+            const { stdout } = await execAsync('cat /etc/passwd');
+            const lines = stdout.split('\n');
+            
+            console.log('System Users:');
+            console.log('══════════════════════════════════════════');
+            console.log('Username      UID     GID     Home');
+            console.log('──────────────────────────────────────────');
+            
+            lines.forEach(line => {
+                if (line.trim()) {
+                    const parts = line.split(':');
+                    if (parts.length >= 6) {
+                        const [username, , uid, gid, , home] = parts;
+                        console.log(`${username.padEnd(12)} ${uid.padEnd(7)} ${gid.padEnd(7)} ${home}`);
+                    }
+                }
+            });
+        } catch (error) {
+            console.log('Note: Could not read /etc/passwd');
+            console.log('Current user:', os.userInfo().username);
+        }
+    }
+
+    // Disks handler
+    async disks() {
+        try {
+            const { stdout } = await execAsync('df -h');
+            console.log('Disk Usage:');
+            console.log('══════════════════════════════════════════');
+            console.log(stdout);
+        } catch (error) {
+            // Fallback to Node.js method
+            console.log('Disk information (Node.js):');
+            const drives = [];
+            
+            // Check common mount points
+            const paths = ['/', '/home', '/var', '/usr'];
+            paths.forEach(path => {
+                try {
+                    const stats = fs.statfsSync(path);
+                    const total = (stats.blocks * stats.bsize) / 1024 / 1024 / 1024;
+                    const free = (stats.bfree * stats.bsize) / 1024 / 1024 / 1024;
+                    const used = total - free;
+                    const percent = ((used / total) * 100).toFixed(1);
+                    
+                    drives.push({
+                        path: path,
+                        total: total.toFixed(2),
+                        used: used.toFixed(2),
+                        free: free.toFixed(2),
+                        percent: percent
+                    });
+                } catch (e) {
+                    // Path not accessible
+                }
+            });
+            
+            if (drives.length > 0) {
+                console.log('Filesystem            Size  Used  Avail  Use%  Mounted on');
+                drives.forEach(drive => {
+                    console.log(`${drive.path.padEnd(20)} ${drive.total}G ${drive.used}G ${drive.free}G ${drive.percent}%`);
+                });
+            }
+        }
+    }
+
+    // Memory handler
+    async memory() {
+        const total = (os.totalmem() / 1024 / 1024 / 1024).toFixed(2);
+        const free = (os.freemem() / 1024 / 1024 / 1024).toFixed(2);
+        const used = (total - free).toFixed(2);
+        const percent = ((used / total) * 100).toFixed(1);
+        
+        console.log('Memory Usage:');
+        console.log('══════════════════════════════════════════');
+        console.log(`Total:     ${total} GB`);
+        console.log(`Used:      ${used} GB (${percent}%)`);
+        console.log(`Free:      ${free} GB`);
+        
+        // Show memory usage bar
+        const barLength = 40;
+        const filled = Math.round((used / total) * barLength);
+        const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled);
+        console.log(`\n[${bar}] ${percent}%`);
+    }
+
+    // CPU handler
+    async cpu() {
+        const cpus = os.cpus();
+        
+        console.log('CPU Information:');
+        console.log('══════════════════════════════════════════');
+        console.log(`Model: ${cpus[0].model}`);
+        console.log(`Cores: ${cpus.length}`);
+        console.log(`Architecture: ${os.arch()}`);
+        console.log(`Speed: ${cpus[0].speed} MHz`);
+        
+        console.log('\nCPU Usage per Core:');
+        console.log('Core     User (%)   System (%)   Idle (%)');
+        console.log('──────────────────────────────────────────');
+        
+        cpus.forEach((cpu, i) => {
+            const total = cpu.times.user + cpu.times.nice + cpu.times.sys + cpu.times.idle + cpu.times.irq;
+            const user = ((cpu.times.user / total) * 100).toFixed(1);
+            const sys = ((cpu.times.sys / total) * 100).toFixed(1);
+            const idle = ((cpu.times.idle / total) * 100).toFixed(1);
+            
+            console.log(`${i.toString().padEnd(8)} ${user.padEnd(11)} ${sys.padEnd(12)} ${idle}`);
+        });
+    }
+
+    // Network handler
+    async network() {
+        const interfaces = os.networkInterfaces();
+        
+        console.log('Network Interfaces:');
+        console.log('══════════════════════════════════════════');
+        
+        Object.keys(interfaces).forEach(iface => {
+            console.log(`\n${iface}:`);
+            interfaces[iface].forEach(address => {
+                console.log(`  Family: ${address.family}`);
+                console.log(`  Address: ${address.address}`);
+                console.log(`  Netmask: ${address.netmask}`);
+                console.log(`  MAC: ${address.mac || 'N/A'}`);
+                console.log(`  Internal: ${address.internal}`);
+                console.log('  ──────────────────────');
+            });
+        });
+    }
+
+    // Logs handler
+    async logs(args) {
+        const lines = this.getOption(args, '--lines', 10);
+        
+        console.log(`Last ${lines} lines of system logs:`);
+        
+        // Try different log files
+        const logFiles = [
+            '/var/log/syslog',
+            '/var/log/messages',
+            '/var/log/system.log'
+        ];
+        
+        for (const logFile of logFiles) {
+            if (fs.existsSync(logFile)) {
+                try {
+                    const { stdout } = await execAsync(`tail -n ${lines} ${logFile}`);
+                    console.log(`\n${logFile}:`);
+                    console.log('══════════════════════════════════════════');
+                    console.log(stdout);
+                    return;
+                } catch (error) {
+                    // Try next file
+                }
+            }
+        }
+        
+        console.log('Could not access system logs. You may need sudo privileges.');
+    }
+
+    // Clean handler
+    async clean(args) {
+        const cleanAll = args.includes('--all');
+        
+        console.log('Cleaning temporary files...');
+        
+        const tempDirs = [
+            os.tmpdir(),
+            '/tmp',
+            '/var/tmp'
+        ];
+        
+        let cleaned = 0;
+        for (const tempDir of tempDirs) {
+            if (fs.existsSync(tempDir)) {
+                try {
+                    const files = fs.readdirSync(tempDir);
+                    for (const file of files) {
+                        const filePath = `${tempDir}/${file}`;
+                        try {
+                            // Only clean old temp files
+                            const stats = fs.statSync(filePath);
+                            const age = Date.now() - stats.mtimeMs;
+                            
+                            if (cleanAll || age > 24 * 60 * 60 * 1000) { // Older than 1 day
+                                if (fs.lstatSync(filePath).isDirectory()) {
+                                    fs.rmSync(filePath, { recursive: true, force: true });
+                                } else {
+                                    fs.unlinkSync(filePath);
+                                }
+                                cleaned++;
+                            }
+                        } catch (e) {
+                            // Skip files we can't access
+                        }
+                    }
+                } catch (e) {
+                    // Skip directories we can't access
+                }
+            }
+        }
+        
+        console.log(`Cleaned ${cleaned} temporary files.`);
+        
+        if (cleanAll) {
+            console.log('\nCleaning package cache...');
+            try {
+                await execAsync('sudo apt-get clean 2>/dev/null || sudo yum clean all 2>/dev/null || true');
+                console.log('Package cache cleaned.');
+            } catch (error) {
+                console.log('Note: Could not clean package cache.');
+            }
+        }
+    }
+
+    // Update handler
+    async update() {
+        console.log('Updating system packages...');
+        
+        try {
+            // Try apt-get (Debian/Ubuntu)
+            const { stdout } = await execAsync('sudo apt-get update && sudo apt-get upgrade -y');
+            console.log(stdout);
+            console.log('\nSystem update completed.');
+        } catch (error) {
+            try {
+                // Try yum (RHEL/CentOS)
+                const { stdout } = await execAsync('sudo yum update -y');
+                console.log(stdout);
+                console.log('\nSystem update completed.');
+            } catch (error2) {
+                console.log('Could not update system. Please update manually.');
+                console.log('For Debian/Ubuntu: sudo apt-get update && sudo apt-get upgrade');
+                console.log('For RHEL/CentOS: sudo yum update');
+            }
+        }
+    }
+
+    // Helper methods
+    formatUptime(seconds) {
+        const days = Math.floor(seconds / (24 * 60 * 60));
+        const hours = Math.floor((seconds % (24 * 60 * 60)) / (60 * 60));
+        const minutes = Math.floor((seconds % (60 * 60)) / 60);
+        
+        const parts = [];
+        if (days > 0) parts.push(`${days}d`);
+        if (hours > 0) parts.push(`${hours}h`);
+        if (minutes > 0) parts.push(`${minutes}m`);
+        
+        return parts.join(' ') || '< 1 minute';
+    }
+
+    getOption(args, optionName, defaultValue) {
+        for (let i = 0; i < args.length; i++) {
+            if (args[i].startsWith(optionName)) {
+                if (args[i].includes('=')) {
+                    return args[i].split('=')[1];
+                } else if (i + 1 < args.length) {
+                    return args[i + 1];
+                }
+            }
+        }
+        return defaultValue;
+    }
+
+    // Execute command
+    async execute(command, args) {
+        const cmd = this.commands.get(command);
+        if (!cmd) {
+            throw new Error(`Unknown system command: ${command}`);
+        }
+        
+        return cmd.handler.call(this, args);
+    }
+
+    // Register with main system
+    register(registerFn) {
+        for (const [name, cmd] of this.commands.entries()) {
+            registerFn(`system.${name}`, async (args, context) => {
+                return this.execute(name, args);
+            }, {
+                description: cmd.description,
+                usage: cmd.usage
+            });
+        }
+    }
+}
+
+// Export singleton instance
+const systemCommands = new SystemCommands();
+module.exports = systemCommands;
+'''
+        
+        filepath = self.base_path / "src" / "commands" / "system.js"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✓ src/commands/system.js créé")
+        return True
+    
+    def create_file_command(self):
+        """Crée le module de commandes fichiers"""
+        content = '''const fs = require('fs-extra');
+const path = require('path');
+const crypto = require('crypto');
+const archiver = require('archiver');
+const { createGzip, createGunzip } = require('zlib');
+const { pipeline } = require('stream');
+const { promisify } = require('util');
+const pipe = promisify(pipeline);
+
+class FileCommands {
+    constructor() {
+        this.commands = new Map();
+        this.registerCommands();
+    }
+
+    registerCommands() {
+        this.commands.set('find', {
+            handler: this.find,
+            description: 'Find files',
+            usage: 'find <directory> <pattern> [--recursive]'
+        });
+
+        this.commands.set('size', {
+            handler: this.size,
+            description: 'Get file/directory size',
+            usage: 'size <path>'
+        });
+
+        this.commands.set('hash', {
+            handler: this.hash,
+            description: 'Calculate file hash',
+            usage: 'hash <file> [algorithm=sha256]'
+        });
+
+        this.commands.set('compare', {
+            handler: this.compare,
+            description: 'Compare files',
+            usage: 'compare <file1> <file2>'
+        });
+
+        this.commands.set('compress', {
+            handler: this.compress,
+            description: 'Compress file',
+            usage: 'compress <file> [--level=6]'
+        });
+
+        this.commands.set('decompress', {
+            handler: this.decompress,
+            description: 'Decompress file',
+            usage: 'decompress <file>'
+        });
+
+        this.commands.set('stats', {
+            handler: this.stats,
+            description: 'File statistics',
+            usage: 'stats <file>'
+        });
+
+        this.commands.set('backup', {
+            handler: this.backup,
+            description: 'Backup directory',
+            usage: 'backup <source> <destination>'
+        });
+
+        this.commands.set('restore', {
+            handler: this.restore,
+            description: 'Restore backup',
+            usage: 'restore <backup> <destination>'
+        });
+    }
+
+    // Find files handler
+    async find(args) {
+        const directory = args[0];
+        const pattern = args[1];
+        const recursive = args.includes('--recursive');
+        
+        if (!directory || !pattern) {
+            throw new Error('Directory and pattern are required');
+        }
+
+        if (!fs.existsSync(directory)) {
+            throw new Error(`Directory not found: ${directory}`);
+        }
+
+        console.log(`Finding files matching "${pattern}" in ${directory}:`);
+        
+        const found = await this.findFiles(directory, pattern, recursive);
+        
+        if (found.length === 0) {
+            console.log('No files found.');
+        } else {
+            found.forEach(file => console.log(`  ${file}`));
+            console.log(`\nFound ${found.length} files.`);
+        }
+        
+        return found;
+    }
+
+    // Find files recursively
+    async findFiles(dir, pattern, recursive) {
+        const results = [];
+        const regex = new RegExp(pattern.replace(/\*/g, '.*').replace(/\?/g, '.'));
+        
+        async function search(currentDir) {
+            try {
+                const items = await fs.readdir(currentDir);
+                
+                for (const item of items) {
+                    const fullPath = path.join(currentDir, item);
+                    const stat = await fs.stat(fullPath);
+                    
+                    if (stat.isDirectory() && recursive) {
+                        await search(fullPath);
+                    } else if (stat.isFile() && regex.test(item)) {
+                        results.push(fullPath);
+                    }
+                }
+            } catch (error) {
+                // Skip directories we can't access
+            }
+        }
+        
+        await search(dir);
+        return results;
+    }
+
+    // Size handler
+    async size(args) {
+        const target = args[0];
+        if (!target) {
+            throw new Error('Path is required');
+        }
+
+        if (!fs.existsSync(target)) {
+            throw new Error(`Path not found: ${target}`);
+        }
+
+        const stats = await fs.stat(target);
+        
+        if (stats.isDirectory()) {
+            const size = await this.getDirectorySize(target);
+            console.log(`Directory: ${target}`);
+            console.log(`Size: ${this.formatBytes(size)}`);
+            console.log(`Files: ${await this.countFiles(target)}`);
+        } else {
+            console.log(`File: ${target}`);
+            console.log(`Size: ${this.formatBytes(stats.size)}`);
+            console.log(`Permissions: ${stats.mode.toString(8).slice(-3)}`);
+            console.log(`Modified: ${stats.mtime.toLocaleString()}`);
+            console.log(`Owner: ${stats.uid}:${stats.gid}`);
+        }
+    }
+
+    // Get directory size recursively
+    async getDirectorySize(dir) {
+        let total = 0;
+        
+        async function traverse(currentDir) {
+            const items = await fs.readdir(currentDir);
+            
+            for (const item of items) {
+                const fullPath = path.join(currentDir, item);
+                const stat = await fs.stat(fullPath);
+                
+                if (stat.isDirectory()) {
+                    await traverse(fullPath);
+                } else {
+                    total += stat.size;
+                }
+            }
+        }
+        
+        await traverse(dir);
+        return total;
+    }
+
+    // Count files in directory
+    async countFiles(dir) {
+        let count = 0;
+        
+        async function traverse(currentDir) {
+            const items = await fs.readdir(currentDir);
+            
+            for (const item of items) {
+                const fullPath = path.join(currentDir, item);
+                const stat = await fs.stat(fullPath);
+                
+                if (stat.isDirectory()) {
+                    await traverse(fullPath);
+                } else {
+                    count++;
+                }
+            }
+        }
+        
+        await traverse(dir);
+        return count;
+    }
+
+    // Hash handler
+    async hash(args) {
+        const file = args[0];
+        const algorithm = args[1] || 'sha256';
+        
+        if (!file) {
+            throw new Error('File is required');
+        }
+
+        if (!fs.existsSync(file)) {
+            throw new Error(`File not found: ${file}`);
+        }
+
+        console.log(`Calculating ${algorithm.toUpperCase()} hash for ${file}:`);
+        
+        try {
+            const hash = crypto.createHash(algorithm);
+            const stream = fs.createReadStream(file);
+            
+            await new Promise((resolve, reject) => {
+                stream.on('data', chunk => hash.update(chunk));
+                stream.on('end', () => resolve());
+                stream.on('error', reject);
+            });
+            
+            const digest = hash.digest('hex');
+            console.log(`${algorithm.toUpperCase()}: ${digest}`);
+            return digest;
+        } catch (error) {
+            throw new Error(`Failed to calculate hash: ${error.message}`);
+        }
+    }
+
+    // Compare files handler
+    async compare(args) {
+        const file1 = args[0];
+        const file2 = args[1];
+        
+        if (!file1 || !file2) {
+            throw new Error('Two files are required');
+        }
+
+        if (!fs.existsSync(file1)) {
+            throw new Error(`File not found: ${file1}`);
+        }
+        if (!fs.existsSync(file2)) {
+            throw new Error(`File not found: ${file2}`);
+        }
+
+        console.log(`Comparing ${file1} and ${file2}:`);
+        
+        const stats1 = await fs.stat(file1);
+        const stats2 = await fs.stat(file2);
+        
+        console.log(`File 1 size: ${this.formatBytes(stats1.size)}`);
+        console.log(`File 2 size: ${this.formatBytes(stats2.size)}`);
+        
+        if (stats1.size !== stats2.size) {
+            console.log('Files have different sizes.');
+            return false;
+        }
+        
+        // Compare hashes
+        const hash1 = await this.hash([file1, 'md5']);
+        const hash2 = await this.hash([file2, 'md5']);
+        
+        if (hash1 === hash2) {
+            console.log('Files are identical.');
+            return true;
+        } else {
+            console.log('Files are different.');
+            return false;
+        }
+    }
+
+    // Compress handler
+    async compress(args) {
+        const file = args[0];
+        const level = this.getOption(args, '--level', 6);
+        
+        if (!file) {
+            throw new Error('File is required');
+        }
+
+        if (!fs.existsSync(file)) {
+            throw new Error(`File not found: ${file}`);
+        }
+
+        const outputFile = `${file}.gz`;
+        console.log(`Compressing ${file} to ${outputFile}...`);
+        
+        try {
+            const gzip = createGzip({ level: parseInt(level) });
+            const source = fs.createReadStream(file);
+            const destination = fs.createWriteStream(outputFile);
+            
+            await pipe(source, gzip, destination);
+            
+            const originalSize = (await fs.stat(file)).size;
+            const compressedSize = (await fs.stat(outputFile)).size;
+            const ratio = ((originalSize - compressedSize) / originalSize * 100).toFixed(2);
+            
+            console.log(`Compression completed:`);
+            console.log(`  Original: ${this.formatBytes(originalSize)}`);
+            console.log(`  Compressed: ${this.formatBytes(compressedSize)}`);
+            console.log(`  Ratio: ${ratio}%`);
+            
+            return outputFile;
+        } catch (error) {
+            throw new Error(`Compression failed: ${error.message}`);
+        }
+    }
+
+    // Decompress handler
+    async decompress(args) {
+        const file = args[0];
+        if (!file) {
+            throw new Error('File is required');
+        }
+
+        if (!fs.existsSync(file)) {
+            throw new Error(`File not found: ${file}`);
+        }
+
+        if (!file.endsWith('.gz')) {
+            throw new Error('File must have .gz extension');
+        }
+
+        const outputFile = file.replace(/\.gz$/, '');
+        console.log(`Decompressing ${file} to ${outputFile}...`);
+        
+        try {
+            const gunzip = createGunzip();
+            const source = fs.createReadStream(file);
+            const destination = fs.createWriteStream(outputFile);
+            
+            await pipe(source, gunzip, destination);
+            
+            console.log(`Decompression completed: ${outputFile}`);
+            return outputFile;
+        } catch (error) {
+            throw new Error(`Decompression failed: ${error.message}`);
+        }
+    }
+
+    // Stats handler
+    async stats(args) {
+        const file = args[0];
+        if (!file) {
+            throw new Error('File is required');
+        }
+
+        if (!fs.existsSync(file)) {
+            throw new Error(`File not found: ${file}`);
+        }
+
+        const stats = await fs.stat(file);
+        
+        console.log(`Statistics for ${file}:`);
+        console.log('══════════════════════════════════════════');
+        
+        console.log(`Size: ${this.formatBytes(stats.size)}`);
+        console.log(`Type: ${stats.isDirectory() ? 'Directory' : stats.isFile() ? 'File' : 'Other'}`);
+        console.log(`Permissions: ${stats.mode.toString(8).slice(-3)}`);
+        console.log(`Created: ${stats.birthtime.toLocaleString()}`);
+        console.log(`Modified: ${stats.mtime.toLocaleString()}`);
+        console.log(`Accessed: ${stats.atime.toLocaleString()}`);
+        console.log(`Owner: ${stats.uid}:${stats.gid}`);
+        
+        if (stats.isFile()) {
+            const content = await fs.readFile(file, 'utf8').catch(() => '');
+            const lines = content.split('\n').length;
+            const words = content.split(/\s+/).filter(w => w).length;
+            const chars = content.length;
+            
+            console.log(`\nContent:`);
+            console.log(`  Lines: ${lines}`);
+            console.log(`  Words: ${words}`);
+            console.log(`  Characters: ${chars}`);
+        }
+    }
+
+    // Backup handler
+    async backup(args) {
+        const source = args[0];
+        const destination = args[1];
+        
+        if (!source || !destination) {
+            throw new Error('Source and destination are required');
+        }
+
+        if (!fs.existsSync(source)) {
+            throw new Error(`Source not found: ${source}`);
+        }
+
+        const backupFile = path.join(destination, `backup_${Date.now()}.tar.gz`);
+        console.log(`Creating backup of ${source} to ${backupFile}...`);
+        
+        try {
+            await fs.ensureDir(destination);
+            
+            const output = fs.createWriteStream(backupFile);
+            const archive = archiver('tar', {
+                gzip: true,
+                gzipOptions: { level: 6 }
+            });
+            
+            archive.pipe(output);
+            archive.directory(source, false);
+            
+            await archive.finalize();
+            
+            const size = (await fs.stat(backupFile)).size;
+            console.log(`Backup created: ${backupFile} (${this.formatBytes(size)})`);
+            return backupFile;
+        } catch (error) {
+            throw new Error(`Backup failed: ${error.message}`);
+        }
+    }
+
+    // Restore handler
+    async restore(args) {
+        const backup = args[0];
+        const destination = args[1];
+        
+        if (!backup || !destination) {
+            throw new Error('Backup file and destination are required');
+        }
+
+        if (!fs.existsSync(backup)) {
+            throw new Error(`Backup file not found: ${backup}`);
+        }
+
+        console.log(`Restoring backup ${backup} to ${destination}...`);
+        
+        try {
+            await fs.ensureDir(destination);
+            
+            // For simplicity, we'll just extract tar.gz files
+            // In production, you'd use a proper tar extraction library
+            const { exec } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+            
+            await execAsync(`tar -xzf "${backup}" -C "${destination}"`);
+            
+            console.log(`Backup restored to ${destination}`);
+            return true;
+        } catch (error) {
+            throw new Error(`Restore failed: ${error.message}`);
+        }
+    }
+
+    // Helper methods
+    formatBytes(bytes) {
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let size = bytes;
+        let unitIndex = 0;
+        
+        while (size >= 1024 && unitIndex < units.length - 1) {
+            size /= 1024;
+            unitIndex++;
+        }
+        
+        return `${size.toFixed(2)} ${units[unitIndex]}`;
+    }
+
+    getOption(args, optionName, defaultValue) {
+        for (let i = 0; i < args.length; i++) {
+            if (args[i].startsWith(optionName)) {
+                if (args[i].includes('=')) {
+                    return args[i].split('=')[1];
+                } else if (i + 1 < args.length) {
+                    return args[i + 1];
+                }
+            }
+        }
+        return defaultValue;
+    }
+
+    // Execute command
+    async execute(command, args) {
+        const cmd = this.commands.get(command);
+        if (!cmd) {
+            throw new Error(`Unknown file command: ${command}`);
+        }
+        
+        return cmd.handler.call(this, args);
+    }
+
+    // Register with main system
+    register(registerFn) {
+        for (const [name, cmd] of this.commands.entries()) {
+            registerFn(`file.${name}`, async (args, context) => {
+                return this.execute(name, args);
+            }, {
+                description: cmd.description,
+                usage: cmd.usage
+            });
+        }
+    }
+}
+
+// Export singleton instance
+const fileCommands = new FileCommands();
+module.exports = fileCommands;
+'''
+        
+        filepath = self.base_path / "src" / "commands" / "file.js"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✓ src/commands/file.js créé")
+        return True
+    
+    def create_crypto_command(self):
+        """Crée le module de commandes cryptographiques"""
+        content = '''const crypto = require('crypto');
+const CryptoJS = require('crypto-js');
+
+class CryptoCommands {
+    constructor() {
+        this.commands = new Map();
+        this.registerCommands();
+    }
+
+    registerCommands() {
+        this.commands.set('hash', {
+            handler: this.hash,
+            description: 'Hash string or file',
+            usage: 'hash <input> [algorithm=sha256]'
+        });
+
+        this.commands.set('encrypt', {
+            handler: this.encrypt,
+            description: 'Encrypt text',
+            usage: 'encrypt <text> <key> [algorithm=aes-256-cbc]'
+        });
+
+        this.commands.set('decrypt', {
+            handler: this.decrypt,
+            description: 'Decrypt text',
+            usage: 'decrypt <text> <key> [algorithm=aes-256-cbc]'
+        });
+
+        this.commands.set('generate-password', {
+            handler: this.generatePassword,
+            description: 'Generate secure password',
+            usage: 'generate-password [length=16] [--symbols] [--numbers]'
+        });
+
+        this.commands.set('generate-key', {
+            handler: this.generateKey,
+            description: 'Generate encryption key',
+            usage: 'generate-key [bits=256]'
+        });
+
+        this.commands.set('encode', {
+            handler: this.encode,
+            description: 'Encode data',
+            usage: 'encode <type> <data>'
+        });
+
+        this.commands.set('decode', {
+            handler: this.decode,
+            description: 'Decode data',
+            usage: 'decode <type> <data>'
+        });
+    }
+
+    // Hash handler
+    async hash(args) {
+        const input = args[0];
+        const algorithm = args[1] || 'sha256';
+        
+        if (!input) {
+            throw new Error('Input is required');
+        }
+
+        // Check if input is a file path
+        const fs = require('fs');
+        let data;
+        
+        if (fs.existsSync(input)) {
+            // It's a file
+            console.log(`Hashing file: ${input}`);
+            data = fs.readFileSync(input);
+        } else {
+            // It's a string
+            console.log(`Hashing string: ${input}`);
+            data = input;
+        }
+
+        const hash = crypto.createHash(algorithm);
+        hash.update(data);
+        const digest = hash.digest('hex');
+        
+        console.log(`${algorithm.toUpperCase()}: ${digest}`);
+        
+        // Also show other common hashes for comparison
+        if (typeof data === 'string') {
+            console.log('\nOther hashes for comparison:');
+            ['md5', 'sha1', 'sha256', 'sha512'].forEach(algo => {
+                if (algo !== algorithm) {
+                    const h = crypto.createHash(algo);
+                    h.update(data);
+                    console.log(`${algo.toUpperCase()}: ${h.digest('hex')}`);
+                }
+            });
+        }
+        
+        return digest;
+    }
+
+    // Encrypt handler
+    async encrypt(args) {
+        const text = args[0];
+        const key = args[1];
+        const algorithm = args[2] || 'aes-256-cbc';
+        
+        if (!text || !key) {
+            throw new Error('Text and key are required');
+        }
+
+        console.log(`Encrypting with ${algorithm}:`);
+        console.log(`Text: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
+        
+        let encrypted;
+        
+        switch (algorithm.toLowerCase()) {
+            case 'aes-256-cbc':
+                encrypted = CryptoJS.AES.encrypt(text, key).toString();
+                break;
+                
+            case 'des':
+                encrypted = CryptoJS.DES.encrypt(text, key).toString();
+                break;
+                
+            case 'tripledes':
+                encrypted = CryptoJS.TripleDES.encrypt(text, key).toString();
+                break;
+                
+            case 'rabbit':
+                encrypted = CryptoJS.Rabbit.encrypt(text, key).toString();
+                break;
+                
+            case 'rc4':
+                encrypted = CryptoJS.RC4.encrypt(text, key).toString();
+                break;
+                
+            default:
+                throw new Error(`Unsupported algorithm: ${algorithm}`);
+        }
+        
+        console.log(`Encrypted: ${encrypted}`);
+        return encrypted;
+    }
+
+    // Decrypt handler
+    async decrypt(args) {
+        const text = args[0];
+        const key = args[1];
+        const algorithm = args[2] || 'aes-256-cbc';
+        
+        if (!text || !key) {
+            throw new Error('Text and key are required');
+        }
+
+        console.log(`Decrypting with ${algorithm}:`);
+        
+        let decrypted;
+        
+        try {
+            switch (algorithm.toLowerCase()) {
+                case 'aes-256-cbc':
+                    decrypted = CryptoJS.AES.decrypt(text, key).toString(CryptoJS.enc.Utf8);
+                    break;
+                    
+                case 'des':
+                    decrypted = CryptoJS.DES.decrypt(text, key).toString(CryptoJS.enc.Utf8);
+                    break;
+                    
+                case 'tripledes':
+                    decrypted = CryptoJS.TripleDES.decrypt(text, key).toString(CryptoJS.enc.Utf8);
+                    break;
+                    
+                case 'rabbit':
+                    decrypted = CryptoJS.Rabbit.decrypt(text, key).toString(CryptoJS.enc.Utf8);
+                    break;
+                    
+                case 'rc4':
+                    decrypted = CryptoJS.RC4.decrypt(text, key).toString(CryptoJS.enc.Utf8);
+                    break;
+                    
+                default:
+                    throw new Error(`Unsupported algorithm: ${algorithm}`);
+            }
+            
+            if (!decrypted) {
+                throw new Error('Decryption failed - wrong key or corrupted data');
+            }
+            
+            console.log(`Decrypted: ${decrypted}`);
+            return decrypted;
+        } catch (error) {
+            throw new Error(`Decryption failed: ${error.message}`);
+        }
+    }
+
+    // Generate password handler
+    async generatePassword(args) {
+        const length = parseInt(args[0]) || 16;
+        const includeSymbols = args.includes('--symbols');
+        const includeNumbers = args.includes('--numbers') || true;
+        
+        if (length < 8) {
+            throw new Error('Password length must be at least 8 characters');
+        }
+        if (length > 128) {
+            throw new Error('Password length cannot exceed 128 characters');
+        }
+
+        console.log(`Generating ${length}-character password:`);
+        
+        let charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        if (includeNumbers) charset += '0123456789';
+        if (includeSymbols) charset += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+        
+        let password = '';
+        for (let i = 0; i < length; i++) {
+            const randomIndex = crypto.randomInt(0, charset.length);
+            password += charset[randomIndex];
+        }
+        
+        console.log(`Password: ${password}`);
+        
+        // Calculate password strength
+        const strength = this.calculatePasswordStrength(password);
+        console.log(`Strength: ${strength.score}/10 - ${strength.label}`);
+        
+        // Show hashes for reference
+        console.log('\nHashes for reference:');
+        console.log(`MD5: ${crypto.createHash('md5').update(password).digest('hex')}`);
+        console.log(`SHA256: ${crypto.createHash('sha256').update(password).digest('hex')}`);
+        
+        return password;
+    }
+
+    // Generate key handler
+    async generateKey(args) {
+        const bits = parseInt(args[0]) || 256;
+        
+        if (![128, 192, 256].includes(bits)) {
+            throw new Error('Key size must be 128, 192, or 256 bits');
+        }
+
+        console.log(`Generating ${bits}-bit encryption key:`);
+        
+        const key = crypto.randomBytes(bits / 8);
+        const keyHex = key.toString('hex');
+        const keyBase64 = key.toString('base64');
+        
+        console.log(`Hex: ${keyHex}`);
+        console.log(`Base64: ${keyBase64}`);
+        
+        // Generate IV if needed
+        if (bits >= 256) {
+            const iv = crypto.randomBytes(16);
+            console.log(`\nIV (Hex): ${iv.toString('hex')}`);
+            console.log(`IV (Base64): ${iv.toString('base64')}`);
+        }
+        
+        return {
+            hex: keyHex,
+            base64: keyBase64,
+            bits: bits
+        };
+    }
+
+    // Encode handler
+    async encode(args) {
+        const type = args[0];
+        const data = args.slice(1).join(' ');
+        
+        if (!type || !data) {
+            throw new Error('Type and data are required');
+        }
+
+        console.log(`Encoding data as ${type}:`);
+        console.log(`Input: ${data.substring(0, 100)}${data.length > 100 ? '...' : ''}`);
+        
+        let encoded;
+        
+        switch (type.toLowerCase()) {
+            case 'base64':
+                encoded = Buffer.from(data).toString('base64');
+                break;
+                
+            case 'hex':
+                encoded = Buffer.from(data).toString('hex');
+                break;
+                
+            case 'url':
+                encoded = encodeURIComponent(data);
+                break;
+                
+            case 'base64url':
+                encoded = Buffer.from(data).toString('base64')
+                    .replace(/\+/g, '-')
+                    .replace(/\//g, '_')
+                    .replace(/=/g, '');
+                break;
+                
+            default:
+                throw new Error(`Unsupported encoding type: ${type}`);
+        }
+        
+        console.log(`Encoded: ${encoded}`);
+        return encoded;
+    }
+
+    // Decode handler
+    async decode(args) {
+        const type = args[0];
+        const data = args.slice(1).join(' ');
+        
+        if (!type || !data) {
+            throw new Error('Type and data are required');
+        }
+
+        console.log(`Decoding ${type} data:`);
+        
+        let decoded;
+        
+        try {
+            switch (type.toLowerCase()) {
+                case 'base64':
+                    decoded = Buffer.from(data, 'base64').toString('utf8');
+                    break;
+                    
+                case 'hex':
+                    decoded = Buffer.from(data, 'hex').toString('utf8');
+                    break;
+                    
+                case 'url':
+                    decoded = decodeURIComponent(data);
+                    break;
+                    
+                case 'base64url':
+                    const base64 = data.replace(/-/g, '+').replace(/_/g, '/');
+                    decoded = Buffer.from(base64, 'base64').toString('utf8');
+                    break;
+                    
+                default:
+                    throw new Error(`Unsupported decoding type: ${type}`);
+            }
+            
+            console.log(`Decoded: ${decoded}`);
+            return decoded;
+        } catch (error) {
+            throw new Error(`Decoding failed: ${error.message}`);
+        }
+    }
+
+    // Helper method to calculate password strength
+    calculatePasswordStrength(password) {
+        let score = 0;
+        
+        // Length check
+        if (password.length >= 8) score += 2;
+        if (password.length >= 12) score += 2;
+        if (password.length >= 16) score += 1;
+        
+        // Character variety checks
+        if (/[a-z]/.test(password)) score += 1;
+        if (/[A-Z]/.test(password)) score += 1;
+        if (/[0-9]/.test(password)) score += 1;
+        if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+        
+        // Pattern checks (penalize simple patterns)
+        if (/(.)\1{2,}/.test(password)) score -= 1; // Repeated characters
+        if (/^[0-9]+$/.test(password)) score -= 1; // Only numbers
+        if (/^[a-zA-Z]+$/.test(password)) score -= 1; // Only letters
+        
+        // Ensure score is between 0 and 10
+        score = Math.max(0, Math.min(10, score));
+        
+        const labels = [
+            'Very Weak', 'Very Weak', 'Weak', 'Weak', 'Fair',
+            'Fair', 'Good', 'Good', 'Strong', 'Very Strong', 'Excellent'
+        ];
+        
+        return {
+            score: score,
+            label: labels[score]
+        };
+    }
+
+    // Execute command
+    async execute(command, args) {
+        const cmd = this.commands.get(command);
+        if (!cmd) {
+            throw new Error(`Unknown crypto command: ${command}`);
+        }
+        
+        return cmd.handler.call(this, args);
+    }
+
+    // Register with main system
+    register(registerFn) {
+        for (const [name, cmd] of this.commands.entries()) {
+            registerFn(`crypto.${name}`, async (args, context) => {
+                return this.execute(name, args);
+            }, {
+                description: cmd.description,
+                usage: cmd.usage
+            });
+        }
+    }
+}
+
+// Export singleton instance
+const cryptoCommands = new CryptoCommands();
+module.exports = cryptoCommands;
+'''
+        
+        filepath = self.base_path / "src" / "commands" / "crypto.js"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✓ src/commands/crypto.js créé")
+        return True
+    
+    def create_dev_command(self):
+        """Crée le module de commandes développement"""
+        content = '''const fs = require('fs-extra');
+const path = require('path');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+const execAsync = promisify(exec);
+
+class DevCommands {
+    constructor() {
+        this.commands = new Map();
+        this.registerCommands();
+    }
+
+    registerCommands() {
+        this.commands.set('compile', {
+            handler: this.compile,
+            description: 'Compile C program',
+            usage: 'compile <file.c> [--output=<name>]'
+        });
+
+        this.commands.set('run', {
+            handler: this.run,
+            description: 'Run executable',
+            usage: 'run <file> [args...]'
+        });
+
+        this.commands.set('test', {
+            handler: this.test,
+            description: 'Run tests',
+            usage: 'test [directory]'
+        });
+
+        this.commands.set('format', {
+            handler: this.format,
+            description: 'Format code',
+            usage: 'format <file> [--language=auto]'
+        });
+
+        this.commands.set('analyze', {
+            handler: this.analyze,
+            description: 'Code analysis',
+            usage: 'analyze <file>'
+        });
+
+        this.commands.set('docs', {
+            handler: this.docs,
+            description: 'Generate documentation',
+            usage: 'docs <directory> [--output=docs]'
+        });
+
+        this.commands.set('lint', {
+            handler: this.lint,
+            description: 'Lint code',
+            usage: 'lint <file> [--language=auto]'
+        });
+    }
+
+    // Compile handler
+    async compile(args) {
+        const file = args[0];
+        if (!file) {
+            throw new Error('Source file is required');
+        }
+
+        if (!file.endsWith('.c')) {
+            throw new Error('File must have .c extension');
+        }
+
+        if (!fs.existsSync(file)) {
+            throw new Error(`File not found: ${file}`);
+        }
+
+        // Get output name
+        let outputName = this.getOption(args, '--output', null);
+        if (!outputName) {
+            outputName = path.basename(file, '.c');
+        }
+
+        console.log(`Compiling ${file} to ${outputName}...`);
+        
+        try {
+            const { stdout, stderr } = await execAsync(
+                `gcc -Wall -Wextra -O2 "${file}" -o "${outputName}"`
+            );
+            
+            if (stderr) {
+                console.warn('Compilation warnings:');
+                console.warn(stderr);
+            }
+            
+            // Check if executable was created
+            if (fs.existsSync(outputName)) {
+                const stats = fs.statSync(outputName);
+                console.log(`Compilation successful: ${outputName}`);
+                console.log(`Size: ${(stats.size / 1024).toFixed(2)} KB`);
+                
+                // Show file info
+                const { stdout: fileInfo } = await execAsync(`file "${outputName}"`);
+                console.log(`Type: ${fileInfo.trim()}`);
+                
+                return outputName;
+            } else {
+                throw new Error('Executable was not created');
+            }
+        } catch (error) {
+            if (error.stderr) {
+                console.error('Compilation errors:');
+                console.error(error.stderr);
+            }
+            throw new Error(`Compilation failed: ${error.message}`);
+        }
+    }
+
+    // Run handler
+    async run(args) {
+        const file = args[0];
+        const runArgs = args.slice(1);
+        
+        if (!file) {
+            throw new Error('Executable file is required');
+        }
+
+        if (!fs.existsSync(file)) {
+            throw new Error(`File not found: ${file}`);
+        }
+
+        // Check if file is executable
+        try {
+            await fs.access(file, fs.constants.X_OK);
+        } catch {
+            console.warn('File is not executable. Trying to make it executable...');
+            await execAsync(`chmod +x "${file}"`);
+        }
+
+        console.log(`Running ${file} ${runArgs.join(' ')}...`);
+        console.log('══════════════════════════════════════════');
+        
+        try {
+            const { stdout, stderr } = await execAsync(`"${file}" ${runArgs.join(' ')}`, {
+                stdio: 'inherit'
+            });
+            
+            if (stderr) {
+                console.error('\nStandard Error:');
+                console.error(stderr);
+            }
+            
+            return stdout;
+        } catch (error) {
+            if (error.stdout) console.log(error.stdout);
+            if (error.stderr) console.error(error.stderr);
+            throw new Error(`Program execution failed: ${error.message}`);
+        }
+    }
+
+    // Test handler
+    async test(args) {
+        const directory = args[0] || '.';
+        
+        if (!fs.existsSync(directory)) {
+            throw new Error(`Directory not found: ${directory}`);
+        }
+
+        console.log(`Looking for tests in ${directory}...`);
+        
+        // Look for test files
+        const testFiles = await this.findTestFiles(directory);
+        
+        if (testFiles.length === 0) {
+            console.log('No test files found.');
+            return [];
+        }
+        
+        console.log(`Found ${testFiles.length} test file(s):`);
+        testFiles.forEach(file => console.log(`  ${file}`));
+        
+        console.log('\nRunning tests...');
+        console.log('══════════════════════════════════════════');
+        
+        const results = [];
+        for (const testFile of testFiles) {
+            console.log(`\nRunning: ${path.basename(testFile)}`);
+            
+            try {
+                // Make file executable if needed
+                await execAsync(`chmod +x "${testFile}" 2>/dev/null || true`);
+                
+                // Run test
+                const { stdout, stderr } = await execAsync(`"${testFile}"`, {
+                    timeout: 30000
+                });
+                
+                console.log('✓ PASS');
+                if (stdout.trim()) {
+                    console.log(`Output: ${stdout.substring(0, 200)}${stdout.length > 200 ? '...' : ''}`);
+                }
+                
+                results.push({
+                    file: testFile,
+                    passed: true,
+                    output: stdout,
+                    error: null
+                });
+            } catch (error) {
+                console.log('✗ FAIL');
+                if (error.stdout) console.log(`Output: ${error.stdout.substring(0, 200)}`);
+                if (error.stderr) console.error(`Error: ${error.stderr.substring(0, 200)}`);
+                
+                results.push({
+                    file: testFile,
+                    passed: false,
+                    output: error.stdout,
+                    error: error.stderr || error.message
+                });
+            }
+        }
+        
+        // Summary
+        const passed = results.filter(r => r.passed).length;
+        const failed = results.filter(r => !r.passed).length;
+        
+        console.log('\n══════════════════════════════════════════');
+        console.log(`Test Summary: ${passed} passed, ${failed} failed, ${results.length} total`);
+        
+        return results;
+    }
+
+    // Format handler
+    async format(args) {
+        const file = args[0];
+        if (!file) {
+            throw new Error('File is required');
+        }
+
+        if (!fs.existsSync(file)) {
+            throw new Error(`File not found: ${file}`);
+        }
+
+        const language = this.getOption(args, '--language', 'auto');
+        const detectedLang = language === 'auto' ? this.detectLanguage(file) : language;
+        
+        console.log(`Formatting ${file} (${detectedLang})...`);
+        
+        try {
+            let command;
+            
+            switch (detectedLang.toLowerCase()) {
+                case 'c':
+                case 'cpp':
+                    command = `clang-format -i "${file}" 2>/dev/null || echo "Install clang-format for C/C++ formatting"`;
+                    break;
+                    
+                case 'python':
+                    command = `black "${file}" 2>/dev/null || autopep8 --in-place "${file}" 2>/dev/null || echo "Install black or autopep8 for Python formatting"`;
+                    break;
+                    
+                case 'javascript':
+                case 'typescript':
+                    command = `prettier --write "${file}" 2>/dev/null || echo "Install prettier for JavaScript/TypeScript formatting"`;
+                    break;
+                    
+                case 'java':
+                    command = `google-java-format -i "${file}" 2>/dev/null || echo "Install google-java-format for Java formatting"`;
+                    break;
+                    
+                case 'go':
+                    command = `gofmt -w "${file}" 2>/dev/null || echo "Install gofmt for Go formatting"`;
+                    break;
+                    
+                default:
+                    // Basic formatting for other files
+                    const content = await fs.readFile(file, 'utf8');
+                    const formatted = this.basicFormat(content);
+                    await fs.writeFile(file, formatted);
+                    console.log('Basic formatting applied (line length: 80)');
+                    return true;
+            }
+            
+            const { stdout, stderr } = await execAsync(command);
+            if (stdout) console.log(stdout);
+            if (stderr) console.error(stderr);
+            
+            console.log('Formatting completed');
+            return true;
+        } catch (error) {
+            throw new Error(`Formatting failed: ${error.message}`);
+        }
+    }
+
+    // Analyze handler
+    async analyze(args) {
+        const file = args[0];
+        if (!file) {
+            throw new Error('File is required');
+        }
+
+        if (!fs.existsSync(file)) {
+            throw new Error(`File not found: ${file}`);
+        }
+
+        const language = this.detectLanguage(file);
+        console.log(`Analyzing ${file} (${language})...`);
+        
+        try {
+            let command;
+            
+            switch (language.toLowerCase()) {
+                case 'c':
+                case 'cpp':
+                    command = `cppcheck --enable=all "${file}" 2>&1 | head -30`;
+                    break;
+                    
+                case 'python':
+                    command = `pylint "${file}" 2>&1 | tail -20`;
+                    break;
+                    
+                case 'javascript':
+                    command = `eslint "${file}" 2>/dev/null || echo "Install eslint for JavaScript analysis"`;
+                    break;
+                    
+                case 'java':
+                    command = `checkstyle -c /sun_checks.xml "${file}" 2>/dev/null || echo "Install checkstyle for Java analysis"`;
+                    break;
+                    
+                default:
+                    console.log(`No specific analyzer for ${language}`);
+                    await this.basicAnalysis(file);
+                    return;
+            }
+            
+            const { stdout, stderr } = await execAsync(command);
+            if (stdout) console.log(stdout);
+            if (stderr) console.error(stderr);
+            
+        } catch (error) {
+            console.log(`Analysis failed: ${error.message}`);
+        }
+    }
+
+    // Docs handler
+    async docs(args) {
+        const directory = args[0] || '.';
+        const outputDir = this.getOption(args, '--output', 'docs');
+        
+        if (!fs.existsSync(directory)) {
+            throw new Error(`Directory not found: ${directory}`);
+        }
+
+        console.log(`Generating documentation from ${directory} to ${outputDir}...`);
+        
+        try {
+            await fs.ensureDir(outputDir);
+            
+            // Look for source files
+            const sourceFiles = await this.findSourceFiles(directory);
+            
+            if (sourceFiles.length === 0) {
+                console.log('No source files found for documentation.');
+                return;
+            }
+            
+            console.log(`Found ${sourceFiles.length} source file(s)`);
+            
+            // Create basic documentation
+            const docs = await this.generateBasicDocs(sourceFiles, directory);
+            const indexFile = path.join(outputDir, 'index.html');
+            
+            await fs.writeFile(indexFile, this.createHtmlDocs(docs));
+            
+            console.log(`Documentation generated: ${indexFile}`);
+            console.log(`Open file://${path.resolve(indexFile)} in your browser`);
+            
+            return indexFile;
+        } catch (error) {
+            throw new Error(`Documentation generation failed: ${error.message}`);
+        }
+    }
+
+    // Lint handler
+    async lint(args) {
+        const file = args[0];
+        if (!file) {
+            throw new Error('File is required');
+        }
+
+        if (!fs.existsSync(file)) {
+            throw new Error(`File not found: ${file}`);
+        }
+
+        const language = this.getOption(args, '--language', 'auto');
+        const detectedLang = language === 'auto' ? this.detectLanguage(file) : language;
+        
+        console.log(`Linting ${file} (${detectedLang})...`);
+        
+        // Basic linting checks
+        const issues = await this.basicLint(file, detectedLang);
+        
+        if (issues.length === 0) {
+            console.log('✓ No issues found');
+        } else {
+            console.log(`Found ${issues.length} issue(s):`);
+            issues.forEach(issue => {
+                console.log(`  ${issue.severity.toUpperCase()}: ${issue.message} (line ${issue.line})`);
+            });
+        }
+        
+        return issues;
+    }
+
+    // Helper methods
+    async findTestFiles(dir) {
+        const testFiles = [];
+        
+        async function traverse(currentDir) {
+            try {
+                const items = await fs.readdir(currentDir);
+                
+                for (const item of items) {
+                    const fullPath = path.join(currentDir, item);
+                    const stat = await fs.stat(fullPath);
+                    
+                    if (stat.isDirectory()) {
+                        await traverse(fullPath);
+                    } else if (stat.isFile()) {
+                        const name = item.toLowerCase();
+                        if (name.includes('test') || name.includes('spec')) {
+                            // Check if it's likely a test file
+                            const ext = path.extname(item).toLowerCase();
+                            if (['', '.sh', '.js', '.py', '.rb', '.php'].includes(ext)) {
+                                testFiles.push(fullPath);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                // Skip directories we can't access
+            }
+        }
+        
+        await traverse(dir);
+        return testFiles;
+    }
+
+    detectLanguage(filename) {
+        const ext = path.extname(filename).toLowerCase();
+        
+        const languageMap = {
+            '.c': 'C',
+            '.cpp': 'C++',
+            '.cc': 'C++',
+            '.h': 'C/C++ Header',
+            '.hpp': 'C++ Header',
+            '.py': 'Python',
+            '.js': 'JavaScript',
+            '.ts': 'TypeScript',
+            '.java': 'Java',
+            '.go': 'Go',
+            '.rb': 'Ruby',
+            '.php': 'PHP',
+            '.rs': 'Rust',
+            '.swift': 'Swift',
+            '.kt': 'Kotlin',
+            '.scala': 'Scala',
+            '.pl': 'Perl',
+            '.lua': 'Lua',
+            '.sh': 'Shell',
+            '.bash': 'Bash',
+            '.zsh': 'Zsh',
+            '.fish': 'Fish',
+            '.ps1': 'PowerShell',
+            '.bat': 'Batch',
+            '.cmd': 'CMD',
+            '.html': 'HTML',
+            '.css': 'CSS',
+            '.json': 'JSON',
+            '.xml': 'XML',
+            '.yaml': 'YAML',
+            '.yml': 'YAML',
+            '.md': 'Markdown',
+            '.txt': 'Text'
+        };
+        
+        return languageMap[ext] || 'Unknown';
+    }
+
+    basicFormat(content) {
+        // Simple formatter: wrap lines at 80 characters
+        const lines = content.split('\n');
+        const formatted = [];
+        
+        for (const line of lines) {
+            if (line.length <= 80) {
+                formatted.push(line);
+            } else {
+                // Simple word wrap
+                let currentLine = '';
+                const words = line.split(' ');
+                
+                for (const word of words) {
+                    if ((currentLine + ' ' + word).length <= 80) {
+                        currentLine += (currentLine ? ' ' : '') + word;
+                    } else {
+                        if (currentLine) formatted.push(currentLine);
+                        currentLine = word;
+                    }
+                }
+                
+                if (currentLine) formatted.push(currentLine);
+            }
+        }
+        
+        return formatted.join('\n');
+    }
+
+    async basicAnalysis(file) {
+        const content = await fs.readFile(file, 'utf8');
+        const lines = content.split('\n');
+        
+        console.log('\nBasic Analysis:');
+        console.log('══════════════════════════════════════════');
+        console.log(`Lines: ${lines.length}`);
+        console.log(`Characters: ${content.length}`);
+        
+        const codeLines = lines.filter(line => line.trim() && !line.trim().startsWith('//') && !line.trim().startsWith('#'));
+        console.log(`Code lines: ${codeLines.length}`);
+        
+        const commentLines = lines.filter(line => line.trim().startsWith('//') || line.trim().startsWith('#'));
+        console.log(`Comment lines: ${commentLines.length}`);
+        
+        const emptyLines = lines.filter(line => !line.trim());
+        console.log(`Empty lines: ${emptyLines.length}`);
+        
+        // Check for long lines
+        const longLines = lines.filter((line, index) => line.length > 120);
+        if (longLines.length > 0) {
+            console.log(`\nWarning: ${longLines.length} lines exceed 120 characters`);
+            longLines.slice(0, 5).forEach((line, i) => {
+                console.log(`  Line ${lines.indexOf(line) + 1}: ${line.substring(0, 50)}...`);
+            });
+        }
+    }
+
+    async findSourceFiles(dir) {
+        const sourceFiles = [];
+        const extensions = ['.c', '.cpp', '.py', '.js', '.java', '.go', '.rb', '.php', '.rs'];
+        
+        async function traverse(currentDir) {
+            try {
+                const items = await fs.readdir(currentDir);
+                
+                for (const item of items) {
+                    const fullPath = path.join(currentDir, item);
+                    const stat = await fs.stat(fullPath);
+                    
+                    if (stat.isDirectory() && !item.startsWith('.') && item !== 'node_modules') {
+                        await traverse(fullPath);
+                    } else if (stat.isFile()) {
+                        const ext = path.extname(item).toLowerCase();
+                        if (extensions.includes(ext)) {
+                            sourceFiles.push(fullPath);
+                        }
+                    }
+                }
+            } catch (error) {
+                // Skip directories we can't access
+            }
+        }
+        
+        await traverse(dir);
+        return sourceFiles;
+    }
+
+    async generateBasicDocs(files, baseDir) {
+        const docs = [];
+        
+        for (const file of files) {
+            const relativePath = path.relative(baseDir, file);
+            const content = await fs.readFile(file, 'utf8');
+            const language = this.detectLanguage(file);
+            
+            // Extract basic info
+            const lines = content.split('\n');
+            const functions = lines.filter(line => 
+                line.includes('function') || 
+                line.includes('def ') || 
+                line.match(/^\s*\w+\s+\w+\(/) ||
+                line.includes('public') && line.includes('(')
+            );
+            
+            docs.push({
+                file: relativePath,
+                language: language,
+                lines: lines.length,
+                functions: functions.slice(0, 10).map(f => f.trim()),
+                preview: content.substring(0, 500)
+            });
+        }
+        
+        return docs;
+    }
+
+    createHtmlDocs(docs) {
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Code Documentation</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .file { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .language { color: #666; font-size: 0.9em; }
+        .functions { margin-top: 10px; }
+        .function { background: #f0f0f0; padding: 5px; margin: 2px 0; }
+        .preview { margin-top: 10px; font-size: 0.9em; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Code Documentation</h1>
+    <p>Generated ${new Date().toLocaleString()}</p>
+    
+    ${docs.map(doc => `
+    <div class="file">
+        <h3>${doc.file}</h3>
+        <div class="language">${doc.language} • ${doc.lines} lines</div>
+        
+        ${doc.functions.length > 0 ? `
+        <div class="functions">
+            <h4>Functions:</h4>
+            ${doc.functions.map(f => `<div class="function">${f}</div>`).join('')}
+        </div>
+        ` : ''}
+        
+        <div class="preview">
+            <h4>Preview:</h4>
+            <pre>${doc.preview}</pre>
+        </div>
+    </div>
+    `).join('')}
+</body>
+</html>
+        `;
+    }
+
+    async basicLint(file, language) {
+        const issues = [];
+        const content = await fs.readFile(file, 'utf8');
+        const lines = content.split('\n');
+        
+        // Check for trailing whitespace
+        lines.forEach((line, index) => {
+            if (line.endsWith(' ') || line.endsWith('\t')) {
+                issues.push({
+                    line: index + 1,
+                    message: 'Trailing whitespace',
+                    severity: 'warning'
+                });
+            }
+        });
+        
+        // Check line length
+        lines.forEach((line, index) => {
+            if (line.length > 120) {
+                issues.push({
+                    line: index + 1,
+                    message: `Line too long (${line.length} > 120 characters)`,
+                    severity: 'warning'
+                });
+            }
+        });
+        
+        // Language-specific checks
+        if (language.toLowerCase() === 'python') {
+            lines.forEach((line, index) => {
+                if (line.includes('print ') && !line.includes('print(')) {
+                    issues.push({
+                        line: index + 1,
+                        message: 'Use print() function instead of print statement',
+                        severity: 'warning'
+                    });
+                }
+            });
+        }
+        
+        if (language.toLowerCase() === 'javascript') {
+            lines.forEach((line, index) => {
+                if (line.includes('console.log') && line.includes('//')) {
+                    issues.push({
+                        line: index + 1,
+                        message: 'Consider removing console.log before committing',
+                        severity: 'info'
+                    });
+                }
+            });
+        }
+        
+        return issues;
+    }
+
+    getOption(args, optionName, defaultValue) {
+        for (let i = 0; i < args.length; i++) {
+            if (args[i].startsWith(optionName)) {
+                if (args[i].includes('=')) {
+                    return args[i].split('=')[1];
+                } else if (i + 1 < args.length) {
+                    return args[i + 1];
+                }
+            }
+        }
+        return defaultValue;
+    }
+
+    // Execute command
+    async execute(command, args) {
+        const cmd = this.commands.get(command);
+        if (!cmd) {
+            throw new Error(`Unknown dev command: ${command}`);
+        }
+        
+        return cmd.handler.call(this, args);
+    }
+
+    // Register with main system
+    register(registerFn) {
+        for (const [name, cmd] of this.commands.entries()) {
+            registerFn(`dev.${name}`, async (args, context) => {
+                return this.execute(name, args);
+            }, {
+                description: cmd.description,
+                usage: cmd.usage
+            });
+        }
+    }
+}
+
+// Export singleton instance
+const devCommands = new DevCommands();
+module.exports = devCommands;
+'''
+        
+        filepath = self.base_path / "src" / "commands" / "dev.js"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✓ src/commands/dev.js créé")
+        return True
+    
+    def create_config_file(self):
+        """Crée le fichier de configuration par défaut"""
+        content = {
+            "version": "4.0.0",
+            "name": "clobes-pro",
+            "config": {
+                "performance": {
+                    "maxConnections": 10,
+                    "timeout": 30,
+                    "retryAttempts": 3,
+                    "cacheEnabled": true,
+                    "parallelDownloads": 4
+                },
+                "network": {
+                    "userAgent": "CLOBES-PRO/4.0.0",
+                    "defaultProtocol": "https",
+                    "dnsCache": true,
+                    "compression": true,
+                    "verifySSL": true,
+                    "maxRedirects": 10,
+                    "rateLimit": 100
+                },
+                "ui": {
+                    "colors": true,
+                    "progressBars": true,
+                    "emoji": true,
+                    "verbose": false
+                },
+                "features": {
+                    "autoUpdate": true,
+                    "analytics": false,
+                    "telemetry": false,
+                    "plugins": true
+                }
+            },
+            "commands": {
+                "enabled": ["network", "system", "file", "crypto", "dev"],
+                "disabled": []
+            },
+            "cache": {
+                "maxSize": 100,
+                "defaultTTL": 300,
+                "persist": true,
+                "persistFile": "./cache/clobes.cache"
+            }
+        }
+        
+        filepath = self.base_path / "config" / "default.json"
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(content, f, indent=2)
+        
+        print(f"✓ config/default.json créé")
+        return True
+    
+    def create_vscode_config(self):
+        """Crée la configuration VSCode"""
+        # settings.json
+        settings = {
+            "editor.formatOnSave": True,
+            "editor.defaultFormatter": "esbenp.prettier-vscode",
+            "editor.tabSize": 2,
+            "files.exclude": {
+                "**/.git": true,
+                "**/.DS_Store": true,
+                "**/node_modules": true
+            },
+            "javascript.format.enable": true,
+            "typescript.format.enable": true,
+            "files.autoSave": "afterDelay"
+        }
+        
+        settings_path = self.base_path / ".vscode" / "settings.json"
+        with open(settings_path, 'w', encoding='utf-8') as f:
+            json.dump(settings, f, indent=2)
+        
+        # launch.json
+        launch = {
+            "version": "0.2.0",
+            "configurations": [
+                {
+                    "type": "node",
+                    "request": "launch",
+                    "name": "Debug CLOBES",
+                    "skipFiles": [
+                        "<node_internals>/**"
+                    ],
+                    "program": "${workspaceFolder}/bin/clobes.js",
+                    "args": ["version"]
+                },
+                {
+                    "type": "node",
+                    "request": "launch",
+                    "name": "Debug Network Command",
+                    "skipFiles": [
+                        "<node_internals>/**"
+                    ],
+                    "program": "${workspaceFolder}/bin/clobes.js",
+                    "args": ["network", "get", "https://api.github.com"]
+                }
+            ]
+        }
+        
+        launch_path = self.base_path / ".vscode" / "launch.json"
+        with open(launch_path, 'w', encoding='utf-8') as f:
+            json.dump(launch, f, indent=2)
+        
+        print(f"✓ .vscode/ configuration créée")
+        return True
+    
+    def create_all(self):
+        """Crée toute la structure"""
+        print("🚀 Génération de CLOBES Pro Node.js...")
+        print("══════════════════════════════════════════")
+        
+        try:
+            # Créer le répertoire de base
+            self.base_path.mkdir(parents=True, exist_ok=True)
+            
+            # Créer tous les composants
+            self.create_directory_structure()
+            print()
+            
+            self.create_package_json()
+            self.create_cli_entry()
+            self.create_index_js()
+            print()
+            
+            self.create_http_util()
+            self.create_logger_util()
+            self.create_cache_lib()
+            print()
+            
+            self.create_network_command()
+            self.create_system_command()
+            self.create_file_command()
+            self.create_crypto_command()
+            self.create_dev_command()
+            print()
+            
+            self.create_config_file()
+            self.create_vscode_config()
+            
+            print("\n══════════════════════════════════════════")
+            print("✅ CLOBES Pro Node.js généré avec succès!")
+            print(f"📁 Répertoire: {self.base_path}")
+            print("\n📋 Étapes d'installation:")
+            print("   1. cd", self.base_path)
+            print("   2. npm install")
+            print("   3. npm link (pour installer globalement)")
+            print("\n🚀 Utilisation:")
+            print("   clobes version")
+            print("   clobes network get https://api.github.com")
+            print("   clobes system info")
+            print("   clobes file find /var/log *.log")
+            print("   clobes crypto generate-password")
+            print("   clobes dev compile program.c")
+            
+            return True
+            
+        except Exception as e:
+            print(f"\n❌ Erreur lors de la génération: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+def main():
+    """Fonction principale"""
+    import sys
+    
+    # Vérifier si un chemin personnalisé est fourni
+    base_path = sys.argv[1] if len(sys.argv) > 1 else "clobes-pro-node"
+    
+    # Créer le générateur
+    generator = ClobesGenerator(base_path)
+    
+    # Générer tout
+    success = generator.create_all()
+    
+    if success:
+        sys.exit(0)
+    else:
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
