@@ -111,3 +111,45 @@ help:
 	@echo "$(YELLOW)CLOBES PRO v4.0.0 - Ultimate CLI Toolkit$(NC)"
 
 .DEFAULT_GOAL := help
+
+install-user:
+@echo "$(GREEN)📦 Installing CLOBES PRO for current user...$(NC)"
+@mkdir -p ~/.local/bin
+@cp clobes ~/.local/bin/
+@chmod 755 ~/.local/bin/clobes
+@mkdir -p ~/.config/clobes
+@cp config/user.json ~/.config/clobes/config.pro.json 2>/dev/null || \\
+echo '{"ui":{"colors":true}}' > ~/.config/clobes/config.pro.json
+@if ! echo "$$PATH" | grep -q "$$HOME/.local/bin"; then \\
+echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.bashrc; \\
+echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.profile; \\
+echo "$(BLUE)✓ Added ~/.local/bin to PATH$(NC)"; \\
+fi
+@echo "$(GREEN)✅ CLOBES PRO installed for current user$(NC)"
+@echo ""
+@echo "You may need to restart your shell or run:"
+@echo "  source ~/.bashrc"
+@echo ""
+@echo "Then test with:"
+@echo "  clobes version"
+
+install-user:
+@echo "$(GREEN)📦 Installing CLOBES PRO for current user...$(NC)"
+@mkdir -p ~/.local/bin
+@cp clobes ~/.local/bin/
+@chmod 755 ~/.local/bin/clobes
+@mkdir -p ~/.config/clobes
+@cp config/user.json ~/.config/clobes/config.pro.json 2>/dev/null || \\
+echo '{"ui":{"colors":true}}' > ~/.config/clobes/config.pro.json
+@if ! echo "$$PATH" | grep -q "$$HOME/.local/bin"; then \\
+echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.bashrc; \\
+echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.profile; \\
+echo "$(BLUE)✓ Added ~/.local/bin to PATH$(NC)"; \\
+fi
+@echo "$(GREEN)✅ CLOBES PRO installed for current user$(NC)"
+@echo ""
+@echo "You may need to restart your shell or run:"
+@echo "  source ~/.bashrc"
+@echo ""
+@echo "Then test with:"
+@echo "  clobes version"
