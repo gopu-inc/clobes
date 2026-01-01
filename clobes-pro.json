@@ -7,20 +7,21 @@
     "build_dir": ".",
     "output": "clobes-pro-4.0.0.zv",
     "include": [
-        "src/",
-        "bin/",
-        "lib/",
-        "modules/",
-        "plugins/",
-        "Makefile",
-        "@za.json",
+        "clobes",
         "install.sh",
         "quickstart.sh",
+        "Makefile",
+        "@za.json",
         "clobes-completion.bash",
+        "README.md",
+        "LICENSE",
+        "src/",
+        "bin/",
+        "modules/",
+        "plugins/",
         "config/",
-        "completion/",
-        "man/",
-        "examples/"
+        "examples/",
+        "docs/"
     ],
     "exclude": [
         "*.tmp",
@@ -29,6 +30,8 @@
         "__pycache__",
         "node_modules",
         ".git",
-        ".vscode"
+        ".vscode",
+        "*.backup",
+        "clobes-pro"
     ]
-}}
+}

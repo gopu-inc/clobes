@@ -1,0 +1,10 @@
+{
+  "name": "clobes-pro",
+  "version": "4.0.0",
+  "author": "Zenv Pro Team",
+  "license": "MIT",
+  "description": "Ultimate Command Line Toolkit - 200+ commands, replaces curl+wget+dig+ping+gcc+more",
+  "output_file": "clobes-pro-4.0.0.zv",
+  "build_date": 1767230325,
+  "sha256": "30cc0807c6b24a7db1d0f6ceb665114759a53ae96b20b68df1c54f037e50c02f"
+}
