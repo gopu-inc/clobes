@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -std=c99 -I./src
+# AJOUTEZ cette option pour supprimer l'avertissement
+CFLAGS = -Wall -Wextra -O2 -std=c99 -I./src -isystem /usr/include
 LDFLAGS = -lcurl
 TARGET = clobes
 
