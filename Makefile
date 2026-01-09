@@ -1,12 +1,15 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -std=c99
+CFLAGS = -Wall -Wextra -O2 -std=c99 -I./src
 LDFLAGS = -lcurl
 TARGET = clobes
 
+# Source files
+SRC = src/clobes.c
+
 all: $(TARGET)
 
-$(TARGET): clobes.c
-	$(CC) $(CFLAGS) src/clobes.c -o $(TARGET) $(LDFLAGS)
+$(TARGET): $(SRC)
+	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS)
 
 clean:
 	rm -f $(TARGET)
