@@ -1,11 +1,10 @@
 CC = gcc
-# AJOUTEZ cette option pour supprimer l'avertissement
-CFLAGS = -Wall -Wextra -O2 -std=c99 -I./src -isystem /usr/include
-LDFLAGS = -lcurl
+CFLAGS = -Wall -Wextra -O2 -std=c99 -I./src -pthread -D_GNU_SOURCE
+LDFLAGS = -lcurl -lssl -lcrypto -lpthread -lz -ljansson
 TARGET = clobes
 
 # Source files
-SRC = src/clobes.c
+SRC = src/clobes.c src/http.c
 
 all: $(TARGET)
 
@@ -17,6 +16,9 @@ clean:
 
 install:
 	cp $(TARGET) /usr/local/bin/
+	mkdir -p /etc/clobes/
+	cp -r www/ /etc/clobes/
+	cp ssl/* /etc/clobes/ 2>/dev/null || true
 
 uninstall:
 	rm -f /usr/local/bin/$(TARGET)
