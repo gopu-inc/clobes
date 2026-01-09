@@ -3,35 +3,20 @@
 
 #include "clobes.h"
 #include <stdarg.h>
-#include <setjmp.h>
-#include <assert.h>
 #include <regex.h>
+#include <curl/curl.h>
 
 // Global state
 static GlobalState g_state = {
     .config = {
-        .max_connections = 10,
         .timeout = 30,
-        .retry_attempts = 3,
         .cache_enabled = 1,
-        .parallel_downloads = 4,
         .user_agent = "CLOBES-PRO/4.0.0",
-        .default_protocol = "https",
-        .dns_cache = 1,
-        .compression = 1,
         .verify_ssl = 1,
-        .max_redirects = 10,
-        .rate_limit = 100,
         .colors = 1,
         .progress_bars = 1,
-        .emoji = 1,
-        .verbose = 0,
-        .auto_update = 1,
-        .analytics = 0,
-        .telemetry = 0,
-        .plugins = 1
+        .verbose = 0
     },
-    .cache = NULL,
     .cache_hits = 0,
     .cache_misses = 0,
     .total_requests = 0,
@@ -41,7 +26,7 @@ static GlobalState g_state = {
 };
 
 // Command registry
-static Command g_commands[250]; // Room for 250 commands
+static Command g_commands[50];
 static int g_command_count = 0;
 
 // Memory structure for curl
@@ -56,7 +41,9 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     MemoryStruct *mem = (MemoryStruct *)userp;
     
     char *ptr = realloc(mem->memory, mem->size + realsize + 1);
-    if (!ptr) return 0;
+    if (!ptr) {
+        return 0;
+    }
     
     mem->memory = ptr;
     memcpy(&(mem->memory[mem->size]), contents, realsize);
@@ -113,8 +100,8 @@ void log_message(LogLevel level, const char *format, ...) {
         case LOG_ERROR:   level_str = "ERROR";   color = COLOR_RED; break;
         case LOG_WARNING: level_str = "WARNING"; color = COLOR_YELLOW; break;
         case LOG_INFO:    level_str = "INFO";    color = COLOR_BLUE; break;
-        case LOG_DEBUG:   level_str = "DEBUG";   color = COLOR_MAGENTA; break;
-        case LOG_TRACE:   level_str = "TRACE";   color = COLOR_BRIGHT_BLACK; break;
+        case LOG_DEBUG:   level_str = "DEBUG";   color = COLOR_BRIGHT_RED; break;
+        case LOG_TRACE:   level_str = "TRACE";   color = COLOR_BRIGHT_RED; break;
         default:          level_str = "UNKNOWN"; color = COLOR_WHITE; break;
     }
     
@@ -201,7 +188,7 @@ void print_debug(const char *format, ...) {
     va_start(args, format);
     
     if (g_state.config.colors) {
-        printf(COLOR_MAGENTA "🔧 " COLOR_RESET);
+        printf(COLOR_BRIGHT_RED "🔧 " COLOR_RESET);
     } else {
         printf("[DEBUG] ");
     }
@@ -252,16 +239,6 @@ void print_progress_bar(long current, long total, const char *label) {
     fflush(stdout);
 }
 
-// Print spinner
-void print_spinner(const char *message) {
-    static int counter = 0;
-    const char *spinner_chars = "|/-\\";
-    
-    printf("\r%s %c", message, spinner_chars[counter % 4]);
-    fflush(stdout);
-    counter++;
-}
-
 // HTTP GET (curl replacement - faster and smarter)
 char* http_get_simple(const char *url) {
     CURL *curl = curl_easy_init();
@@ -288,11 +265,6 @@ char* http_get_simple(const char *url) {
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, g_state.config.verify_ssl);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, g_state.config.verify_ssl ? 2L : 0L);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-    
-    // Enable compression if configured
-    if (g_state.config.compression) {
-        curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip, deflate");
-    }
     
     // Perform request
     CURLcode res = curl_easy_perform(curl);
@@ -430,17 +402,7 @@ int cmd_version(int argc, char **argv) {
     printf("Unknown\n");
     #endif
     
-    printf("Features:      ");
-    #ifdef USE_SSL
-    printf("SSL ");
-    #endif
-    #ifdef USE_JSON
-    printf("JSON ");
-    #endif
-    #ifdef USE_ZLIB
-    printf("ZLIB ");
-    #endif
-    printf("\n");
+    printf("Features:      curl\n");
     
     printf("Cache:         %s\n", g_state.config.cache_enabled ? "Enabled" : "Disabled");
     printf("Requests:      %ld (avg %.2f ms)\n", 
@@ -482,12 +444,10 @@ int cmd_help(int argc, char **argv) {
     
     // Group commands by category
     const char *categories[] = {
-        "NETWORK", "FILE", "SYSTEM", "CRYPTO", "DEV",
-        "DB", "CLOUD", "DOCKER", "K8S", "MONITOR",
-        "BACKUP", "MEDIA", "TEXT", "MATH", "AI"
+        "NETWORK", "FILE", "SYSTEM", "CRYPTO", "DEV"
     };
     
-    for (int cat = 0; cat < 15; cat++) {
+    for (int cat = 0; cat < 5; cat++) {
         printf(COLOR_CYAN "📦 %s:\n" COLOR_RESET, categories[cat]);
         
         int found = 0;
@@ -531,38 +491,17 @@ int cmd_network(int argc, char **argv) {
         printf(COLOR_GREEN "HTTP Client (better than curl):\n" COLOR_RESET);
         printf("  get <url>              - GET request with JSON support\n");
         printf("  post <url> <data>      - POST with automatic content-type\n");
-        printf("  put <url> <data>       - PUT request\n");
-        printf("  delete <url>           - DELETE request\n");
-        printf("  head <url>             - HEAD request\n");
-        printf("  options <url>          - OPTIONS request\n");
         printf("  download <url> <file>  - Download with progress bar\n");
-        printf("  upload <file> <url>    - Upload file\n");
-        printf("  benchmark <url>        - Benchmark HTTP performance\n");
-        printf("\n");
-        
-        printf(COLOR_GREEN "Network Diagnostics:\n" COLOR_RESET);
         printf("  ping <host>            - Advanced ping with statistics\n");
         printf("  scan <host> <port>     - Port scanner\n");
-        printf("  scan-range <host> <start-end> - Range port scan\n");
-        printf("  dns <domain>           - DNS lookup (A, AAAA, MX, TXT)\n");
-        printf("  whois <domain>         - WHOIS lookup\n");
-        printf("  traceroute <host>      - Trace route with geolocation\n");
-        printf("  speedtest              - Internet speed test\n");
         printf("  myip                   - Show public IP\n");
-        printf("\n");
-        
-        printf(COLOR_GREEN "Protocols:\n" COLOR_RESET);
-        printf("  ssh <user@host>        - SSH client with session management\n");
-        printf("  ftp <url>              - FTP client\n");
-        printf("  sftp <url>             - SFTP client\n");
-        printf("  websocket <url>        - WebSocket client\n");
+        printf("  speedtest              - Internet speed test\n");
         printf("\n");
         
         printf(COLOR_GREEN "Examples:\n" COLOR_RESET);
         printf("  clobes network get https://httpbin.org/json\n");
         printf("  clobes network download https://example.com/file.zip file.zip\n");
-        printf("  clobes network ping google.com -c 10 -i 0.1\n");
-        printf("  clobes network scan example.com 80-443\n");
+        printf("  clobes network ping google.com\n");
         printf("\n");
         
         return 0;
@@ -626,11 +565,6 @@ int cmd_network(int argc, char **argv) {
         char cmd[MAX_CMD_LENGTH];
         snprintf(cmd, sizeof(cmd), "nc -zv %s %s 2>&1", argv[3], argv[4]);
         return system(cmd);
-    } else if (strcmp(argv[2], "benchmark") == 0 && argc >= 4) {
-        print_info("Benchmarking %s...", argv[3]);
-        char cmd[MAX_CMD_LENGTH];
-        snprintf(cmd, sizeof(cmd), "ab -n 100 -c 10 %s 2>/dev/null | grep -E '(Time per|Failed|Transfer)' || echo 'Install apache2-utils for benchmarking'", argv[3]);
-        return system(cmd);
     } else {
         print_error("Unknown network command: %s", argv[2]);
         printf("Use 'clobes network' to see available commands\n");
@@ -646,17 +580,12 @@ int cmd_system(int argc, char **argv) {
         
         printf("  info              - Detailed system information\n");
         printf("  processes         - List all processes\n");
-        printf("  users             - List users\n");
         printf("  disks             - Disk usage\n");
         printf("  memory            - Memory usage\n");
         printf("  cpu               - CPU information\n");
         printf("  network           - Network interfaces\n");
-        printf("  services          - System services\n");
         printf("  logs              - View system logs\n");
-        printf("  update            - Update system packages\n");
         printf("  clean             - Clean temporary files\n");
-        printf("  reboot            - Reboot system\n");
-        printf("  shutdown          - Shutdown system\n");
         printf("\n");
         return 0;
     }
@@ -754,12 +683,8 @@ int cmd_file(int argc, char **argv) {
         printf("  size <file|dir>         - Get size\n");
         printf("  hash <file> [algorithm] - Calculate hash (md5, sha256, sha1)\n");
         printf("  compare <file1> <file2> - Compare files\n");
-        printf("  backup <source> <dest>  - Backup files\n");
-        printf("  restore <backup> <dest> - Restore backup\n");
         printf("  compress <file>         - Compress file (gzip)\n");
         printf("  decompress <file>       - Decompress file\n");
-        printf("  encrypt <file> <key>    - Encrypt file\n");
-        printf("  decrypt <file> <key>    - Decrypt file\n");
         printf("  stats <file>            - File statistics\n");
         printf("\n");
         return 0;
@@ -784,9 +709,7 @@ int cmd_file(int argc, char **argv) {
                       st.st_size / 1024.0, 
                       st.st_size / (1024.0 * 1024.0));
                 printf("Permissions:   %o\n", st.st_mode & 0777);
-                printf("Owner:         %d:%d\n", st.st_uid, st.st_gid);
                 printf("Modified:      %s", ctime(&st.st_mtime));
-                printf("Accessed:      %s", ctime(&st.st_atime));
                 return 0;
             }
         } else {
@@ -855,14 +778,9 @@ int cmd_crypto(int argc, char **argv) {
         printf("══════════════════════════════════════════\n\n");
         
         printf("  hash <string|file>      - Hash string or file\n");
-        printf("  encrypt <text> <key>    - Encrypt text\n");
-        printf("  decrypt <text> <key>    - Decrypt text\n");
         printf("  generate-password       - Generate secure password\n");
-        printf("  generate-key <bits>     - Generate encryption key\n");
         printf("  encode base64 <text>    - Base64 encode\n");
         printf("  decode base64 <text>    - Base64 decode\n");
-        printf("  encode url <text>       - URL encode\n");
-        printf("  decode url <text>       - URL decode\n");
         printf("\n");
         return 0;
     }
@@ -907,24 +825,12 @@ int cmd_crypto(int argc, char **argv) {
             char cmd[MAX_CMD_LENGTH];
             snprintf(cmd, sizeof(cmd), "echo -n '%s' | base64", argv[4]);
             return system(cmd);
-        } else if (strcmp(argv[3], "url") == 0) {
-            print_info("URL encoding '%s':", argv[4]);
-            char cmd[MAX_CMD_LENGTH];
-            snprintf(cmd, sizeof(cmd), "python3 -c 'import urllib.parse; print(urllib.parse.quote(\"%s\"))' 2>/dev/null || echo 'Install python3'", 
-                    argv[4]);
-            return system(cmd);
         }
     } else if (strcmp(argv[2], "decode") == 0 && argc >= 5) {
         if (strcmp(argv[3], "base64") == 0) {
             print_info("Base64 decoding '%s':", argv[4]);
             char cmd[MAX_CMD_LENGTH];
             snprintf(cmd, sizeof(cmd), "echo '%s' | base64 -d 2>/dev/null && echo", argv[4]);
-            return system(cmd);
-        } else if (strcmp(argv[3], "url") == 0) {
-            print_info("URL decoding '%s':", argv[4]);
-            char cmd[MAX_CMD_LENGTH];
-            snprintf(cmd, sizeof(cmd), "python3 -c 'import urllib.parse; print(urllib.parse.unquote(\"%s\"))' 2>/dev/null || echo 'Install python3'", 
-                    argv[4]);
             return system(cmd);
         }
     } else {
@@ -944,13 +850,9 @@ int cmd_dev(int argc, char **argv) {
         
         printf("  compile <file.c>        - Compile C program\n");
         printf("  run <file>              - Run executable\n");
-        printf("  debug <program>         - Debug program\n");
-        printf("  profile <program>       - Profile program\n");
         printf("  test <directory>        - Run tests\n");
         printf("  format <file>           - Format code\n");
         printf("  analyze <file>          - Code analysis\n");
-        printf("  docs <directory>        - Generate documentation\n");
-        printf("  lint <file>             - Lint code\n");
         printf("\n");
         return 0;
     }
@@ -1174,35 +1076,20 @@ int clobes_init(int argc, char **argv) {
     (void)argc; (void)argv; // Unused parameters
     
     // Initialize curl
-    curl_global_init(CURL_GLOBAL_ALL);
+    CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+    if (res != CURLE_OK) {
+        fprintf(stderr, "Failed to initialize curl: %s\n", curl_easy_strerror(res));
+        return 1;
+    }
     
     // Register commands
     register_commands();
-    
-    // Load configuration if exists
-    FILE *config_file = fopen("/etc/clobes/config.pro.json", "r");
-    if (config_file) {
-        fclose(config_file);
-        // TODO: Parse JSON config
-    }
-    
-    // Initialize cache
-    g_state.cache = NULL;
     
     return 0;
 }
 
 // Cleanup clobes
 void clobes_cleanup() {
-    // Cleanup cache
-    CacheEntry *current = g_state.cache;
-    while (current) {
-        CacheEntry *next = current->next;
-        free(current->value);
-        free(current);
-        current = next;
-    }
-    
     // Cleanup curl
     curl_global_cleanup();
 }
