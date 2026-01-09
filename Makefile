@@ -17,8 +17,6 @@ clean:
 install:
 	cp $(TARGET) /usr/local/bin/
 	mkdir -p ./www
-    mkdir /usr/clobes
-    touch /usr/clobes/www
 
 uninstall:
 	rm -f /usr/local/bin/$(TARGET)
