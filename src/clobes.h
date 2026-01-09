@@ -16,7 +16,7 @@
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
 
-// SEULEMENT curl pour commencer
+// Third-party libs (only curl for now)
 #include <curl/curl.h>
 
 // Version
@@ -24,27 +24,37 @@
 #define CLOBES_CODENAME "Thunderbolt"
 #define CLOBES_BUILD __DATE__ " " __TIME__
 
-// Constants - réduisez pour commencer
-#define MAX_CMD_LENGTH 2048
+// Constants
+#define MAX_CMD_LENGTH 8192
 #define MAX_OUTPUT_SIZE 65536
 #define MAX_ARGS 128
 #define MAX_PATH 4096
+#define MAX_URL 2048
+#define MAX_HEADERS 50
 
-// Couleurs simplifiées
+// Colors - COMPLETE SET
 #define COLOR_RESET     "\033[0m"
+#define COLOR_BLACK     "\033[30m"
 #define COLOR_RED       "\033[31m"
 #define COLOR_GREEN     "\033[32m"
 #define COLOR_YELLOW    "\033[33m"
 #define COLOR_BLUE      "\033[34m"
+#define COLOR_MAGENTA   "\033[35m"
 #define COLOR_CYAN      "\033[36m"
 #define COLOR_WHITE     "\033[37m"
+#define COLOR_BRIGHT_BLACK   "\033[90m"
 #define COLOR_BRIGHT_RED     "\033[91m"
 #define COLOR_BRIGHT_GREEN   "\033[92m"
 #define COLOR_BRIGHT_YELLOW  "\033[93m"
+#define COLOR_BRIGHT_BLUE    "\033[94m"
+#define COLOR_BRIGHT_MAGENTA "\033[95m"
 #define COLOR_BRIGHT_CYAN    "\033[96m"
+#define COLOR_BRIGHT_WHITE   "\033[97m"
 
 // Styles
 #define STYLE_BOLD      "\033[1m"
+#define STYLE_DIM       "\033[2m"
+#define STYLE_UNDERLINE "\033[4m"
 
 // Log levels
 typedef enum {
@@ -56,7 +66,7 @@ typedef enum {
     LOG_TRACE
 } LogLevel;
 
-// Command categories - réduisez
+// Command categories
 typedef enum {
     CATEGORY_NETWORK,
     CATEGORY_FILE,
@@ -101,7 +111,9 @@ typedef struct {
     LogLevel log_level;
 } GlobalState;
 
-// Function prototypes - SEULEMENT les fonctions que vous utilisez
+// Function prototypes
+
+// Logging
 void log_message(LogLevel level, const char *format, ...);
 void print_success(const char *format, ...);
 void print_error(const char *format, ...);
