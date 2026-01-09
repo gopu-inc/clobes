@@ -2,6 +2,7 @@
 #include "clobes.h"
 #include <stdarg.h>
 #include <dirent.h>
+#include <regex.h>
 
 // Global state
 static GlobalState g_state = {
@@ -325,15 +326,20 @@ int interactive_mode() {
             printf("  get <url>           - HTTP GET request\n");
             printf("  post <url> <data>   - HTTP POST request\n");
             printf("  download <url>      - Download file\n");
-            printf("  headers             - Show last response headers\n");
+            printf("  server start        - Start web server\n");
             printf("  clear               - Clear screen\n");
-            printf("  history             - Show command history\n");
             printf("  exit/quit           - Exit interactive mode\n");
             continue;
         }
         
         if (strcmp(input, "clear") == 0) {
             system("clear");
+            continue;
+        }
+        
+        if (strcmp(input, "server start") == 0) {
+            char *argv[] = {"clobes", "server", "start", "--port", "8080", NULL};
+            cmd_server(5, argv);
             continue;
         }
         
@@ -628,8 +634,9 @@ int cmd_help(int argc, char **argv) {
     printf("\n" COLOR_GREEN "Quick examples:\n" COLOR_RESET);
     printf("  clobes -i                    # Interactive mode (like curl -i)\n");
     printf("  clobes network get https://api.github.com\n");
+    printf("  clobes server start --port 8080\n");
+    printf("  clobes crypto encode base64 \"Hello World\"\n");
     printf("  clobes system info\n");
-    printf("  clobes file find /var/log *.log\n");
     printf("\n");
     printf("For detailed help: " COLOR_CYAN "clobes help <command>\n" COLOR_RESET);
     
@@ -818,6 +825,7 @@ int cmd_crypto(int argc, char **argv) {
         printf("  hash <string|file>      - Hash string or file\n");
         printf("  encode base64 <text>    - Base64 encode\n");
         printf("  decode base64 <text>    - Base64 decode\n");
+        printf("  generate-password       - Generate secure password\n");
         printf("\n");
         return 0;
     }
@@ -853,6 +861,17 @@ int cmd_crypto(int argc, char **argv) {
             }
             return 0;
         }
+    } else if (strcmp(argv[2], "generate-password") == 0) {
+        int length = 16;
+        if (argc >= 4) length = atoi(argv[3]);
+        if (length < 8) length = 8;
+        if (length > 64) length = 64;
+        
+        char cmd[MAX_CMD_LENGTH];
+        snprintf(cmd, sizeof(cmd), 
+                "tr -dc 'A-Za-z0-9!@#$%%^&*()' < /dev/urandom | head -c %d && echo", 
+                length);
+        return system(cmd);
     }
     
     print_error("Unknown crypto command: %s", argv[2]);
@@ -900,7 +919,7 @@ int cmd_dev(int argc, char **argv) {
     return 1;
 }
 
-// Simplified commands for other features (stubs)
+// Stub commands for future features
 int cmd_proxy(int argc, char **argv) {
     (void)argc; (void)argv;
     print_warning("Proxy feature not implemented yet");
@@ -922,12 +941,6 @@ int cmd_websocket(int argc, char **argv) {
 int cmd_cache(int argc, char **argv) {
     (void)argc; (void)argv;
     print_warning("Cache feature not implemented yet");
-    return 0;
-}
-
-int cmd_server(int argc, char **argv) {
-    (void)argc; (void)argv;
-    print_warning("Server feature not implemented yet");
     return 0;
 }
 
@@ -1023,6 +1036,18 @@ void register_commands() {
     };
     dev_cmd.alias_count = 0;
     
+    // Server commands
+    Command server_cmd = {
+        .name = "server",
+        .description = "HTTP server operations",
+        .usage = "clobes server [start|stop|status|maintenance]",
+        .category = CATEGORY_SERVER,
+        .min_args = 1,
+        .max_args = 10,
+        .handler = cmd_server
+    };
+    server_cmd.alias_count = 0;
+    
     // Add commands to registry
     g_commands[g_command_count++] = version_cmd;
     g_commands[g_command_count++] = help_cmd;
@@ -1031,6 +1056,7 @@ void register_commands() {
     g_commands[g_command_count++] = file_cmd;
     g_commands[g_command_count++] = crypto_cmd;
     g_commands[g_command_count++] = dev_cmd;
+    g_commands[g_command_count++] = server_cmd;
 }
 
 // Find command
@@ -1130,7 +1156,7 @@ int main(int argc, char **argv) {
     // Command not found
     print_error("Unknown command: %s", argv[1]);
     printf("Use 'clobes help' to see available commands\n");
-    printf("Try 'clobes -i' for interactive mode (like curl -i)\n");
+    printf("Try 'clobes -i' for interactive mode (linssr url -i)\n");
     
     clobes_cleanup();
     return 1;
