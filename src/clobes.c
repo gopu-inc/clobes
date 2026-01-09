@@ -3,8 +3,7 @@
 
 #include "clobes.h"
 #include <stdarg.h>
-#include <regex.h>
-#include <curl/curl.h>
+#include <dirent.h>
 
 // Global state
 static GlobalState g_state = {
@@ -100,8 +99,8 @@ void log_message(LogLevel level, const char *format, ...) {
         case LOG_ERROR:   level_str = "ERROR";   color = COLOR_RED; break;
         case LOG_WARNING: level_str = "WARNING"; color = COLOR_YELLOW; break;
         case LOG_INFO:    level_str = "INFO";    color = COLOR_BLUE; break;
-        case LOG_DEBUG:   level_str = "DEBUG";   color = COLOR_BRIGHT_RED; break;
-        case LOG_TRACE:   level_str = "TRACE";   color = COLOR_BRIGHT_RED; break;
+        case LOG_DEBUG:   level_str = "DEBUG";   color = COLOR_MAGENTA; break;
+        case LOG_TRACE:   level_str = "TRACE";   color = COLOR_BRIGHT_BLACK; break;
         default:          level_str = "UNKNOWN"; color = COLOR_WHITE; break;
     }
     
@@ -188,7 +187,7 @@ void print_debug(const char *format, ...) {
     va_start(args, format);
     
     if (g_state.config.colors) {
-        printf(COLOR_BRIGHT_RED "🔧 " COLOR_RESET);
+        printf(COLOR_MAGENTA "🔧 " COLOR_RESET);
     } else {
         printf("[DEBUG] ");
     }
