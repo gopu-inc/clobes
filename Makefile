@@ -6,7 +6,7 @@ TARGET = clobes
 all: $(TARGET)
 
 $(TARGET): clobes.c
-	$(CC) $(CFLAGS) clobes.c -o $(TARGET) $(LDFLAGS)
+	$(CC) $(CFLAGS) src/clobes.c -o $(TARGET) $(LDFLAGS)
 
 clean:
 	rm -f $(TARGET)
