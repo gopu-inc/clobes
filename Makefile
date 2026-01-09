@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -std=c99 -I./src -pthread -D_GNU_SOURCE
-LDFLAGS = -lcurl -lssl -lcrypto -lpthread -lz -ljansson
+CFLAGS = -Wall -Wextra -O2 -std=c99 -I./src
+LDFLAGS = -lcurl -lssl -lcrypto -lpthread
 TARGET = clobes
 
 # Source files
@@ -16,9 +16,9 @@ clean:
 
 install:
 	cp $(TARGET) /usr/local/bin/
-	mkdir -p /etc/clobes/
-	cp -r www/ /etc/clobes/
-	cp ssl/* /etc/clobes/ 2>/dev/null || true
+	mkdir -p ./www
+    mkdir /usr/clobes
+    touch /usr/clobes/www
 
 uninstall:
 	rm -f /usr/local/bin/$(TARGET)
