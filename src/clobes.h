@@ -102,18 +102,8 @@ typedef struct {
     char ip[INET_ADDRSTRLEN];
 } ClientInfo;
 
-// Server session structure
-typedef struct {
-    int server_socket;
-    int running;
-    int client_count;
-    ClientInfo clients[MAX_CLIENTS];
-    pthread_t accept_thread;
-    ServerConfig *config;
-} ServerSession;
-
-// Server Configuration
-typedef struct {
+// Server Configuration - DÉCLARÉ AVANT ServerSession
+typedef struct ServerConfig {
     int port;
     int ssl_port;
     char ip_address[64];
@@ -140,6 +130,16 @@ typedef struct {
     int auto_open_browser;
     char default_page[256];
 } ServerConfig;
+
+// Server session structure - APRÈS ServerConfig
+typedef struct {
+    int server_socket;
+    int running;
+    int client_count;
+    ClientInfo clients[MAX_CLIENTS];
+    pthread_t accept_thread;
+    struct ServerConfig *config;  // Changé de ServerConfig* à struct ServerConfig*
+} ServerSession;
 
 // Command structure
 typedef struct {
@@ -219,19 +219,20 @@ char* base64_decode(const char *input, size_t *output_length);
 
 // Server functions
 int cmd_server(int argc, char **argv);
-int http_server_start(ServerConfig *config);
+int http_server_start(struct ServerConfig *config);
 void http_server_stop(ServerSession *session);
-void server_handle_request(int client_socket, ServerConfig *config);
+void server_handle_request(int client_socket, struct ServerConfig *config);
 int parse_http_request(const char *request, HttpRequest *req);
-void serve_static_file(int client_socket, const char *file_path, ServerConfig *config);
-void execute_php(int client_socket, const char *php_file, const char *query_string, ServerConfig *config);
-void generate_directory_listing(int client_socket, const char *dir_path, const char *request_path, ServerConfig *config);
+void serve_static_file(int client_socket, const char *file_path, struct ServerConfig *config);
+void execute_php(int client_socket, const char *php_file, const char *query_string, struct ServerConfig *config);
+void generate_directory_listing(int client_socket, const char *dir_path, const char *request_path, struct ServerConfig *config);
 const char* get_mime_type(const char *filename);
 void url_decode(char *dst, const char *src);
 char* get_local_ip();
 void generate_qr_code(const char *url);
 void open_browser(const char *url);
-char* find_index_file(const char *dir_path, ServerConfig *config);
+char* find_index_file(const char *dir_path, struct ServerConfig *config);
+void server_stop(int signal);  // AJOUTÉE
 
 // Commands
 int cmd_version(int argc, char **argv);
