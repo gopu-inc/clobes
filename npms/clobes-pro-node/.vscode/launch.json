@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug CLOBES",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/bin/clobes.js",
+      "args": [
+        "version"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Network Command",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/bin/clobes.js",
+      "args": [
+        "network",
+        "get",
+        "https://api.github.com"
+      ]
+    }
+  ]
+}

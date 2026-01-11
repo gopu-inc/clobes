@@ -1,0 +1,50 @@
+{
+  "version": "4.0.0",
+  "name": "clobes-pro",
+  "config": {
+    "performance": {
+      "maxConnections": 10,
+      "timeout": 30,
+      "retryAttempts": 3,
+      "cacheEnabled": true,
+      "parallelDownloads": 4
+    },
+    "network": {
+      "userAgent": "CLOBES-PRO/4.0.0",
+      "defaultProtocol": "https",
+      "dnsCache": true,
+      "compression": true,
+      "verifySSL": true,
+      "maxRedirects": 10,
+      "rateLimit": 100
+    },
+    "ui": {
+      "colors": true,
+      "progressBars": true,
+      "emoji": true,
+      "verbose": false
+    },
+    "features": {
+      "autoUpdate": true,
+      "analytics": false,
+      "telemetry": false,
+      "plugins": true
+    }
+  },
+  "commands": {
+    "enabled": [
+      "network",
+      "system",
+      "file",
+      "crypto",
+      "dev"
+    ],
+    "disabled": []
+  },
+  "cache": {
+    "maxSize": 100,
+    "defaultTTL": 300,
+    "persist": true,
+    "persistFile": "./cache/clobes.cache"
+  }
+}
