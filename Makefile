@@ -1,24 +1,28 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -O2 -std=c99 -I./src
-LDFLAGS = -lcurl -lssl -lcrypto -lpthread
-TARGET = clobes
+# CLOBES PRO Makefile for Alpine iSH
 
-# Source files
-SRC = src/clobes.c src/http.c
+CC = gcc
+CFLAGS = -Wall -Wextra -O2 -std=c99 -pthread
+LIBS = -lcurl -lpthread
+
+TARGET = clobes
+SRC = src/clobes.c
 
 all: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
 
 clean:
 	rm -f $(TARGET)
 
 install:
 	cp $(TARGET) /usr/local/bin/
-	mkdir -p ./www
 
 uninstall:
 	rm -f /usr/local/bin/$(TARGET)
 
-.PHONY: all clean install uninstall
+test:
+	./$(TARGET) version
+	./$(TARGET) help
+
+.PHONY: all clean install uninstall test
