@@ -1,44 +1,31 @@
-# CLOBES PRO ULTRA Makefile for Alpine iSH
-
+# Makefile for CLOBES PRO
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -std=c99 -pthread
-LIBS = -lcurl -lpthread
-
+CFLAGS = -Wall -Wextra -O2 -D_GNU_SOURCE
+LDFLAGS = -lcurl -lpthread -lm -lssl -lcrypto
 TARGET = clobes
-SRC = src/clobes.c
+SRC_DIR = src
+OBJ_DIR = obj
+
+SOURCES = $(wildcard $(SRC_DIR)/*.c)
+OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SOURCES))
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
+$(TARGET): $(OBJECTS)
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
-debug: CFLAGS += -g -DDEBUG
-debug: clean all
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-install:
+install: $(TARGET)
 	cp $(TARGET) /usr/local/bin/
 	chmod +x /usr/local/bin/$(TARGET)
-	@echo "✅ CLOBES PRO ULTRA installed successfully!"
-
-uninstall:
-	rm -f /usr/local/bin/$(TARGET)
-	@echo "✅ CLOBES PRO ULTRA uninstalled!"
 
 clean:
-	rm -f $(TARGET)
+	rm -rf $(OBJ_DIR) $(TARGET)
 
-test: $(TARGET)
-	@echo "🧪 Running tests..."
-	./$(TARGET) version
-	./$(TARGET) help
-	./$(TARGET) system info
-	@echo "✅ Tests passed!"
+run: $(TARGET)
+	./$(TARGET)
 
-setup:
-	@echo "📦 Setting up CLOBES PRO ULTRA..."
-	apk add curl-dev build-base
-	make
-	make install
-	@echo "🚀 Setup complete! Run 'clobes version' to verify."
-
-.PHONY: all debug install uninstall clean test setup
+.PHONY: all clean install run
