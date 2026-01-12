@@ -20,6 +20,9 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <zlib.h>
 
 // Version
 #define CLOBES_VERSION "4.0.0"
@@ -38,6 +41,8 @@
 #define DEFAULT_SSL_PORT 8443
 #define MAX_HEADERS 100
 #define MAX_HEADER_SIZE 4096
+#define GZIP_CHUNK 16384
+#define MAX_FAVICON_SEARCH_DEPTH 3
 
 // Colors
 #define COLOR_RESET     "\033[0m"
@@ -89,6 +94,7 @@ typedef struct {
     int header_count;
     char *body;
     size_t body_length;
+    int accept_gzip;
 } HttpRequest;
 
 // HTTP Response structure
@@ -99,7 +105,15 @@ typedef struct {
     int header_count;
     char *body;
     size_t body_length;
+    int compressed;
 } HttpResponse;
+
+// SSL Context structure
+typedef struct {
+    SSL_CTX *ctx;
+    SSL *ssl;
+    int socket;
+} SSLContext;
 
 // Server Configuration
 typedef struct {
@@ -122,6 +136,9 @@ typedef struct {
     int enable_public_url;
     char custom_domain[256];
     int generate_qr_code;
+    int auto_find_favicon;
+    int search_current_dir;
+    char current_directory[MAX_PATH];
 } ServerConfig;
 
 // Configuration
@@ -150,6 +167,7 @@ typedef struct {
     double total_request_time;
     int debug_mode;
     LogLevel log_level;
+    SSL_CTX *ssl_ctx;
 } GlobalState;
 
 // Function prototypes
@@ -194,19 +212,38 @@ int http_server_start(ServerConfig *config);
 int http_server_start_public(ServerConfig *config);
 void server_stop(int signal);
 void* server_thread_func(void *arg);
+void* ssl_server_thread_func(void *arg);
 int server_handle_client(int client_socket, ServerConfig *config);
-int parse_http_request(int client_socket, HttpRequest *request);
+int ssl_server_handle_client(SSL *ssl, ServerConfig *config);
+int parse_http_request(int client_socket, HttpRequest *request, ServerConfig *config);
+int ssl_parse_http_request(SSL *ssl, HttpRequest *request, ServerConfig *config);
 void send_http_response(int client_socket, HttpResponse *response);
+void ssl_send_http_response(SSL *ssl, HttpResponse *response);
 void free_http_response(HttpResponse *response);
 char* get_mime_type(const char *filename);
-int serve_static_file(int client_socket, const char *filepath, ServerConfig *config);
-int serve_directory_listing(int client_socket, const char *path, const char *request_path, ServerConfig *config);
-int serve_default_page(int client_socket, ServerConfig *config);
+int serve_static_file(int client_socket, const char *filepath, ServerConfig *config, int use_ssl);
+int ssl_serve_static_file(SSL *ssl, const char *filepath, ServerConfig *config);
+int serve_directory_listing(int client_socket, const char *path, const char *request_path, ServerConfig *config, int use_ssl);
+int ssl_serve_directory_listing(SSL *ssl, const char *path, const char *request_path, ServerConfig *config);
+int serve_default_page(int client_socket, ServerConfig *config, int use_ssl);
+int ssl_serve_default_page(SSL *ssl, ServerConfig *config);
 char* generate_public_url(ServerConfig *config);
 int generate_qr_code(const char *url, const char *output_file);
 void print_server_info(ServerConfig *config, const char *public_url);
 char* get_local_ip();
 char* get_public_ip();
+char* find_file_in_directory(const char *dir, const char *filename, int max_depth);
+int compress_gzip(const char *input, size_t input_size, char **output, size_t *output_size);
+int should_compress_file(const char *filename, const char *mime_type);
+
+// SSL functions
+int init_ssl_context(ServerConfig *config);
+SSL* accept_ssl_connection(int client_socket);
+void cleanup_ssl();
+
+// Utility functions
+int create_default_files(ServerConfig *config);
+char* find_favicon(ServerConfig *config);
 
 // Interactive mode
 int interactive_mode();
