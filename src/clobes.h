@@ -1,5 +1,5 @@
-#ifndef CLOBES_PRO_ULTRA_H
-#define CLOBES_PRO_ULTRA_H
+#ifndef CLOBES_PRO_H
+#define CLOBES_PRO_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,28 +15,29 @@
 #include <sys/wait.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <dirent.h>
 #include <pthread.h>
 #include <curl/curl.h>
+#include <openssl/evp.h>
+#include <openssl/sha.h>
+#include <openssl/hmac.h>
 
 // Version
-#define CLOBES_VERSION "5.0.0"
-#define CLOBES_CODENAME "Alpine Thunder"
+#define CLOBES_VERSION "4.0.0"
+#define CLOBES_CODENAME "Thunderbolt"
 #define CLOBES_BUILD __DATE__ " " __TIME__
 
 // Constants
 #define MAX_CMD_LENGTH 8192
 #define MAX_OUTPUT_SIZE 65536
+#define MAX_ARGS 128
 #define MAX_PATH 4096
+#define MAX_URL 2048
+#define MAX_CLIENTS 100
 #define BUFFER_SIZE 8192
 #define DEFAULT_PORT 8080
-#define MAX_CLIENTS 10
-#define MAX_MIME_TYPES 30
+#define DEFAULT_SSL_PORT 8443
+#define MAX_HEADERS 100
+#define MAX_HEADER_SIZE 4096
 
 // Colors
 #define COLOR_RESET     "\033[0m"
@@ -52,201 +53,173 @@
 #define COLOR_BRIGHT_YELLOW  "\033[93m"
 #define COLOR_BRIGHT_BLUE    "\033[94m"
 #define COLOR_BRIGHT_CYAN    "\033[96m"
+#define COLOR_BRIGHT_WHITE   "\033[97m"
 
 // Styles
 #define STYLE_BOLD      "\033[1m"
-#define STYLE_UNDERLINE "\033[4m"
 
-// MIME type structure
-typedef struct {
-    char extension[16];
-    char mime_type[64];
-} MimeType;
+// Log levels
+typedef enum {
+    LOG_FATAL = 0,
+    LOG_ERROR,
+    LOG_WARNING,
+    LOG_INFO,
+    LOG_DEBUG,
+    LOG_TRACE
+} LogLevel;
 
-// Client connection structure
-typedef struct {
-    int socket;
-    struct sockaddr_in address;
-    char ip[INET_ADDRSTRLEN];
-} ClientInfo;
+// Command categories
+typedef enum {
+    CATEGORY_NETWORK,
+    CATEGORY_FILE,
+    CATEGORY_SYSTEM,
+    CATEGORY_CRYPTO,
+    CATEGORY_DEV,
+    CATEGORY_SERVER,
+    CATEGORY_WEB,
+    CATEGORY_UNKNOWN
+} Category;
 
-// Server session structure
+// HTTP Request structure
 typedef struct {
-    int server_socket;
-    int running;
+    char method[16];
+    char path[MAX_PATH];
+    char protocol[16];
+    char headers[MAX_HEADERS][MAX_HEADER_SIZE];
+    int header_count;
+    char *body;
+    size_t body_length;
+} HttpRequest;
+
+// HTTP Response structure
+typedef struct {
+    int status_code;
+    char status_text[64];
+    char headers[MAX_HEADERS][MAX_HEADER_SIZE];
+    int header_count;
+    char *body;
+    size_t body_length;
+} HttpResponse;
+
+// Server Configuration
+typedef struct {
     int port;
+    int ssl_port;
+    char ip_address[64];
+    int max_connections;
+    int timeout;
+    int keep_alive;
+    int worker_threads;
+    char ssl_cert[256];
+    char ssl_key[256];
+    int enable_ssl;
+    int enable_gzip;
     char web_root[256];
-    pthread_t thread;
-} ServerSession;
+    int show_access_log;
+    int maintenance_mode;
+    char maintenance_message[1024];
+    int allow_directory_listing;
+    int enable_public_url;
+    char custom_domain[256];
+    int generate_qr_code;
+} ServerConfig;
 
-// Command structure
+// Configuration
 typedef struct {
-    char name[32];
-    char description[256];
-    char usage[512];
-    int (*handler)(int, char**);
-    char aliases[3][16];
-    int alias_count;
-} Command;
+    int timeout;
+    int cache_enabled;
+    char user_agent[128];
+    int verify_ssl;
+    int colors;
+    int progress_bars;
+    int verbose;
+    // New features
+    int enable_websocket;
+    int enable_jwt;
+    int enable_cache;
+    int enable_gzip;
+    int enable_proxy;
+} Config;
 
 // Global state
 typedef struct {
-    int colors;
+    Config config;
+    int cache_hits;
+    int cache_misses;
+    long total_requests;
+    double total_request_time;
     int debug_mode;
-    int total_requests;
-    ServerSession *server_session;
+    LogLevel log_level;
 } GlobalState;
 
 // Function prototypes
+
+// Logging
+void log_message(LogLevel level, const char *format, ...);
 void print_success(const char *format, ...);
 void print_error(const char *format, ...);
 void print_warning(const char *format, ...);
-void print_info(const char *format, ... print_info(const char *format, ...);
-void);
+void print_info(const char *format, ...);
 void print_debug(const char *format, ...);
 void print_banner();
 void print_progress_bar(long current, long total, const char *label);
-void print_table_header(const char **headers, int count);
-void print_table_row(const char **cells, int count);
 
 // HTTP client
-char* http_get(const char *url, int show_headers, int timeout);
-char* http_post(const char *url, const char *data, const char *content_type);
+char* http_get_simple(const char *url);
+char* http_get_advanced(const char *url, int show_headers, int follow_redirects, int timeout);
+char* http_post_simple(const char *url, const char *data);
+char* http_post_advanced(const char *url, const char *data, const char *content_type, int show_headers);
 int http_download(const char *url, const char *output, int show_progress);
 
-// File operations
-int file_exists(const char *path);
-int dir_exists(const char *path);
-long get_file_size(const char *path);
-void file_info(const char *path);
-int find_files(const char *dir, const char *pattern, int recursive);
-int calculate_hash(const char *path, const char *algorithm);
-
-// System operations
-void system_info();
-void process_list(int detailed);
-void disk_usage();
-void memory_info();
-void network_info();
- print_debug(const char *format, ...);
-void print_banner();
-void print_progress_bar(long current, long total, const char *label);
-void print_table_header(const char **headers, int count);
-void print_table_row(const char **cells, int count);
-
-// HTTP client
-char* http_get(const char *url, int show_headers, int timeout);
-char* http_post(const char *url, const char *data, const char *content_type);
-int http_download(const char *url, const char *output, int show_progress);
-
-// File operations
-int file_exists(const char *path);
-int dir_exists(const char *path);
-long get_file_size(const char *path);
-void file_info(const char *path);
-int find_files(const char *dir, const char *pattern, int recursive);
-int calculate_hash(const char *path, const char *algorithm);
-
-// System operations
-void system_info();
-void process_list(int detailed);
-void disk_usage();
-void memory_info();
-void network_info();
-void cpu_info();
-
-// Crypto operations
-void cpu_info();
-
-// Crypto operations
-char*char* base64_encode(const char *input);
- base64_encode(const char *input);
-char* base64_decode(const char *char* base64_decode(const char *input);
-input);
-char* md5_hash(const char *char* md5_hash(const char *input);
-char* sha256_hash(constinput);
-char* sha256_hash(const char * char *input);
-void generate_password(int length,input);
-void generate_password(int length, int use_symbols);
-
-// Server int use_symbols);
-
-// Server operations operations
-int start_http_server
-int start_http_server(int port, const char *web_root(int port, const char *web_root, int enable_listing);
-void stop_, int enable_listing);
-void stop_http_server();
-void server_status();
-
-http_server();
-void server_status();
+// Base64 functions
+char* base64_encode(const char *input, size_t length);
+char* base64_decode(const char *input, size_t *output_length);
 
 // Commands
-int cmd_version(int// Commands
-int cmd_version(int argc, argc, char **argv);
-int cmd_help char **argv);
+int cmd_version(int argc, char **argv);
 int cmd_help(int argc, char **argv);
-int(int argc, char **argv);
-int cmd_ cmd_network(int argc, char **argv);
-network(int argc, char **argv);
-int cmd_system(int argc, charint cmd_system(int argc, char **argv **argv);
-int cmd_file(int argc, char);
+int cmd_network(int argc, char **argv);
+int cmd_system(int argc, char **argv);
 int cmd_file(int argc, char **argv);
-int cmd_crypto(int **argv);
 int cmd_crypto(int argc, char **argv);
-int cmd_server(int argc, char **argv);
-int cmd_server(int argc, char **argv);
-int cmd argc, char **argv);
 int cmd_dev(int argc, char **argv);
-_dev(int argc, char **argv);
-int cmdint cmd_web(int argc, char **argv_web(int argc, char **argv);
+int cmd_server(int argc, char **argv);
+int cmd_proxy(int argc, char **argv);
+int cmd_jwt(int argc, char **argv);
+int cmd_websocket(int argc, char **argv);
+int cmd_cache(int argc, char **argv);
 
-// Interactive mode
-int interactive_mode);
+// HTTP Server functions
+int http_server_start(ServerConfig *config);
+int http_server_start_public(ServerConfig *config);
+void server_stop(int signal);
+void* server_thread_func(void *arg);
+int server_handle_client(int client_socket, ServerConfig *config);
+int parse_http_request(int client_socket, HttpRequest *request);
+void send_http_response(int client_socket, HttpResponse *response);
+void free_http_response(HttpResponse *response);
+char* get_mime_type(const char *filename);
+int serve_static_file(int client_socket, const char *filepath, ServerConfig *config);
+int serve_directory_listing(int client_socket, const char *path, const char *request_path, ServerConfig *config);
+int serve_default_page(int client_socket, ServerConfig *config);
+char* generate_public_url(ServerConfig *config);
+int generate_qr_code(const char *url, const char *output_file);
+void print_server_info(ServerConfig *config, const char *public_url);
+char* get_local_ip();
+char* get_public_ip();
 
 // Interactive mode
 int interactive_mode();
-void();
-void print_welcome();
-
-// Registry
-void print_welcome();
 
 // Registry
 void register_commands();
-Command* find_command register_commands();
 Command* find_command(const char *name);
-void print_command(const char *name);
-void print_command_list();
 
-// Utilities
-char* get_local_ip();
-void generate_qr_code_list();
-
-// Utilities
-char* get_local_ip();
-void generate_qr_code(const char(const char *url);
-void open_url(const char *url);
-void open_url(const char *url);
-int is_url *url);
-int is_url(const char *str);
-char* trim_string(char *str);
-void print_col(const char *str);
-char* trim_string(char *str);
-void print_colored(const char *color, const charored(const char *color, const char *text *text);
-
-// Main
-int main(int argc);
+// Initialization
+int clobes_init(int argc, char **argv);
+void clobes_cleanup();
 
 // Main
 int main(int argc, char **argv);
 
-// Global state
-extern GlobalState g_state;
-
-#endif // C, char **argv);
-
-// Global state
-extern GlobalState g_state;
-
-#endif // CLOBES_PRO_ULTRA_H
+#endif // CLOBES_PRO_H
