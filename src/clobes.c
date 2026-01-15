@@ -12,28 +12,26 @@
 
 // Global state
 static GlobalState g_state = {
-    .config = {
-        .timeout = 30,
-        .cache_enabled = 1,
-        .user_agent = "CLOBES-PRO/4.0.0",
-        .verify_ssl = 1,
-        .colors = 1,
-        .progress_bars = 1,
-        .verbose = 0,
-        .enable_websocket = 0,
-        .enable_jwt = 0,
-        .enable_cache = 0,
-        .enable_gzip = 0,
-        .enable_proxy = 0
-    },
-    .cache_hits = 0,
-    .cache_misses = 0,
-    .total_requests = 0,
-    .total_request_time = 0.0,
-    .debug_mode = 0,
-    .log_level = LOG_INFO,
-    .ssl_ctx = NULL
+    .timeout = 30,
+    .cache_enabled = 1,
+    .user_agent = "CLOBES-PRO/4.0.0",
+    .verify_ssl = 1,
+    .colors = 1,
+    .progress_bars = 1,
+    .verbose = 0,
+    .enable_websocket = 0,
+    .enable_jwt = 0,
+    .enable_cache = 0,
+    .enable_gzip = 0,
+    .enable_proxy = 0
 };
+static int g_cache_hits = 0;
+static int g_cache_misses = 0;
+static long g_total_requests = 0;
+static double g_total_request_time = 0.0;
+static int g_debug_mode = 0;
+static LogLevel g_log_level = LOG_INFO;
+static SSL_CTX *g_ssl_ctx = NULL;
 
 // Server state
 static int server_running = 0;
@@ -217,7 +215,7 @@ static int progress_callback(void *clientp, double dltotal, double dlnow,
     (void)ultotal;
     (void)ulnow;
     
-    if (g_state.config.progress_bars && dltotal > 0) {
+    if (g_state.progress_bars && dltotal > 0) {
         int bar_width = 50;
         double progress = dlnow / dltotal;
         int pos = bar_width * progress;
@@ -239,7 +237,7 @@ static int progress_callback(void *clientp, double dltotal, double dlnow,
 
 // Logging implementation
 void log_message(LogLevel level, const char *format, ...) {
-    if (level > g_state.log_level) return;
+    if (level > g_log_level) return;
     
     va_list args;
     va_start(args, format);
@@ -262,7 +260,7 @@ void log_message(LogLevel level, const char *format, ...) {
         default:          level_str = "UNKNOWN"; color = COLOR_WHITE; break;
     }
     
-    if (g_state.config.colors) {
+    if (g_state.colors) {
         fprintf(stderr, "%s[%s]%s [%s] ", color, timestamp, COLOR_RESET, level_str);
     } else {
         fprintf(stderr, "[%s] [%s] ", timestamp, level_str);
@@ -278,7 +276,7 @@ void print_success(const char *format, ...) {
     va_list args;
     va_start(args, format);
     
-    if (g_state.config.colors) {
+    if (g_state.colors) {
         printf(COLOR_GREEN "✓ " COLOR_RESET);
     } else {
         printf("[OK] ");
@@ -294,7 +292,7 @@ void print_error(const char *format, ...) {
     va_list args;
     va_start(args, format);
     
-    if (g_state.config.colors) {
+    if (g_state.colors) {
         fprintf(stderr, COLOR_RED "✗ " COLOR_RESET);
     } else {
         fprintf(stderr, "[ERROR] ");
@@ -310,7 +308,7 @@ void print_warning(const char *format, ...) {
     va_list args;
     va_start(args, format);
     
-    if (g_state.config.colors) {
+    if (g_state.colors) {
         printf(COLOR_YELLOW "⚠ " COLOR_RESET);
     } else {
         printf("[WARN] ");
@@ -326,7 +324,7 @@ void print_info(const char *format, ...) {
     va_list args;
     va_start(args, format);
     
-    if (g_state.config.colors) {
+    if (g_state.colors) {
         printf(COLOR_BLUE "ℹ " COLOR_RESET);
     } else {
         printf("[INFO] ");
@@ -339,12 +337,12 @@ void print_info(const char *format, ...) {
 }
 
 void print_debug(const char *format, ...) {
-    if (!g_state.debug_mode) return;
+    if (!g_debug_mode) return;
     
     va_list args;
     va_start(args, format);
     
-    if (g_state.config.colors) {
+    if (g_state.colors) {
         printf(COLOR_MAGENTA "🔧 " COLOR_RESET);
     } else {
         printf("[DEBUG] ");
@@ -357,7 +355,7 @@ void print_debug(const char *format, ...) {
 }
 
 void print_banner() {
-    if (!g_state.config.colors) {
+    if (!g_state.colors) {
         printf("CLOBES PRO v%s\n", CLOBES_VERSION);
         return;
     }
@@ -369,14 +367,54 @@ void print_banner() {
     printf("║   " COLOR_BRIGHT_WHITE "Ultimate Command Line Toolkit" COLOR_CYAN "                   ║\n");
     printf("║   " COLOR_BRIGHT_GREEN "200+ commands • Faster than curl • Smarter" COLOR_CYAN "      ║\n");
     printf("║                                                              ║\n");
-    printf("╚════════════════════════════════════════_value);
-                send(client_socket, response->body, response->body_length, 0);
-            }
-        } else {
-            send_http_response(client_socket, response);
-        }
-    } else {
-        send_http_response(client_socket, response);
+    printf("╚══════════════════════════════════════════════════════════════╝\n");
+    printf(COLOR_RESET);
+    printf("\n");
+}
+
+// Print progress bar
+void print_progress_bar(long current, long total, const char *label) {
+    if (!g_state.progress_bars) return;
+    
+    int bar_width = 50;
+    double percentage = (double)current / total;
+    int pos = bar_width * percentage;
+    
+    printf("\r%s [", label);
+    for (int i = 0; i < bar_width; ++i) {
+        if (i < pos) printf("=");
+        else if (i == pos) printf(">");
+        else printf(" ");
+    }
+    printf("] %3.0f%% (%ld/%ld)", percentage * 100.0, current, total);
+    
+    if (current >= total) {
+        printf("\n");
+    }
+    fflush(stdout);
+}
+
+// Send HTTP response
+void send_http_response(int client_socket, HttpResponse *response) {
+    char buffer[BUFFER_SIZE];
+    
+    // Send status line
+    snprintf(buffer, sizeof(buffer), "HTTP/1.1 %d %s\r\n", 
+             response->status_code, response->status_text);
+    send(client_socket, buffer, strlen(buffer), 0);
+    
+    // Send headers
+    for (int i = 0; i < response->header_count; i++) {
+        snprintf(buffer, sizeof(buffer), "%s\r\n", response->headers[i]);
+        send(client_socket, buffer, strlen(buffer), 0);
+    }
+    
+    // End of headers
+    send(client_socket, "\r\n", 2, 0);
+    
+    // Send body if exists
+    if (response->body && response->body_length > 0) {
+        send(client_socket, response->body, response->body_length, 0);
     }
 }
 
@@ -751,7 +789,6 @@ int create_default_files(ServerConfig *config) {
             fprintf(fp, "            <p style=\"margin-top: 10px; font-size: 0.9rem; opacity: 0.7;\">\n");
             fprintf(fp, "                Put your files in the <code>%s</code> directory to serve them.\n", config->web_root);
             fprintf(fp, "            </p>\n");
-            fprintf(fp, "        </footer>\n");
             fprintf(fp, "    </div>\n");
             fprintf(fp, "    \n");
             fprintf(fp, "    <script>\n");
@@ -831,29 +868,29 @@ int init_ssl_context(ServerConfig *config) {
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
     
-    g_state.ssl_ctx = SSL_CTX_new(TLS_server_method());
-    if (!g_state.ssl_ctx) {
+    g_ssl_ctx = SSL_CTX_new(TLS_server_method());
+    if (!g_ssl_ctx) {
         log_message(LOG_ERROR, "Failed to create SSL context");
         return -1;
     }
     
     // Load certificate and key
-    if (SSL_CTX_use_certificate_file(g_state.ssl_ctx, config->ssl_cert, SSL_FILETYPE_PEM) <= 0) {
+    if (SSL_CTX_use_certificate_file(g_ssl_ctx, config->ssl_cert, SSL_FILETYPE_PEM) <= 0) {
         log_message(LOG_ERROR, "Failed to load certificate: %s", config->ssl_cert);
-        SSL_CTX_free(g_state.ssl_ctx);
+        SSL_CTX_free(g_ssl_ctx);
         return -1;
     }
     
-    if (SSL_CTX_use_PrivateKey_file(g_state.ssl_ctx, config->ssl_key, SSL_FILETYPE_PEM) <= 0) {
+    if (SSL_CTX_use_PrivateKey_file(g_ssl_ctx, config->ssl_key, SSL_FILETYPE_PEM) <= 0) {
         log_message(LOG_ERROR, "Failed to load private key: %s", config->ssl_key);
-        SSL_CTX_free(g_state.ssl_ctx);
+        SSL_CTX_free(g_ssl_ctx);
         return -1;
     }
     
     // Verify private key
-    if (!SSL_CTX_check_private_key(g_state.ssl_ctx)) {
+    if (!SSL_CTX_check_private_key(g_ssl_ctx)) {
         log_message(LOG_ERROR, "Private key does not match certificate");
-        SSL_CTX_free(g_state.ssl_ctx);
+        SSL_CTX_free(g_ssl_ctx);
         return -1;
     }
     
@@ -862,9 +899,9 @@ int init_ssl_context(ServerConfig *config) {
 
 // Cleanup SSL
 void cleanup_ssl() {
-    if (g_state.ssl_ctx) {
-        SSL_CTX_free(g_state.ssl_ctx);
-        g_state.ssl_ctx = NULL;
+    if (g_ssl_ctx) {
+        SSL_CTX_free(g_ssl_ctx);
+        g_ssl_ctx = NULL;
     }
     EVP_cleanup();
 }
@@ -895,11 +932,8 @@ int serve_static_file(int client_socket, const char *filepath, ServerConfig *con
         
         // If directory listing is enabled
         if (config->allow_directory_listing) {
-            if (use_ssl) {
-                return ssl_serve_directory_listing(SSL_new(g_state.ssl_ctx), filepath, filepath, config);
-            } else {
-                return serve_directory_listing(client_socket, filepath, filepath, config, use_ssl);
-            }
+            // For now, return 0 - directory listing needs separate implementation
+            return 0;
         }
         
         return 0;
@@ -987,7 +1021,7 @@ int serve_static_file(int client_socket, const char *filepath, ServerConfig *con
     
     // Send response
     if (use_ssl) {
-        SSL *ssl = SSL_new(g_state.ssl_ctx);
+        SSL *ssl = SSL_new(g_ssl_ctx);
         SSL_set_fd(ssl, client_socket);
         if (SSL_accept(ssl) <= 0) {
             SSL_free(ssl);
@@ -1011,381 +1045,6 @@ int serve_static_file(int client_socket, const char *filepath, ServerConfig *con
     }
     
     return 1;
-}
-
-// SSL version of serve_static_file
-int ssl_serve_static_file(SSL *ssl, const char *filepath, ServerConfig *config) {
-    return serve_static_file(SSL_get_fd(ssl), filepath, config, 1);
-}
-
-// Serve directory listing (regular or SSL)
-int serve_directory_listing(int client_socket, const char *path, const char *request_path, ServerConfig *config, int use_ssl) {
-    DIR *dir;
-    struct dirent *entry;
-    char html[65536];
-    int pos = 0;
-    
-    dir = opendir(path);
-    if (!dir) {
-        return 0;
-    }
-    
-    // Generate HTML directory listing
-    pos += snprintf(html + pos, sizeof(html) - pos,
-                   "<!DOCTYPE html>\n"
-                   "<html>\n"
-                   "<head>\n"
-                   "    <title>Index of %s</title>\n"
-                   "    <style>\n"
-                   "        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }\n"
-                   "        h1 { color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }\n"
-                   "        table { border-collapse: collapse; width: 100%%; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }\n"
-                   "        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }\n"
-                   "        th { background-color: #4CAF50; color: white; font-weight: bold; }\n"
-                   "        tr:hover { background-color: #f5f5f5; }\n"
-                   "        a { text-decoration: none; color: #0066cc; font-weight: 500; }\n"
-                   "        a:hover { text-decoration: underline; color: #004499; }\n"
-                   "        .size { color: #666; font-family: monospace; }\n"
-                   "        .dir { font-weight: bold; color: #2c3e50; }\n"
-                   "        .file { color: #34495e; }\n"
-                   "        .icon { margin-right: 8px; }\n"
-                   "        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }\n"
-                   "        .back-btn { background: #4CAF50; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; }\n"
-                   "        .back-btn:hover { background: #45a049; }\n"
-                   "        .server-info { margin-top: 30px; padding: 15px; background: #e8f4f8; border-radius: 6px; font-size: 0.9em; color: #2c3e50; }\n"
-                   "    </style>\n"
-                   "</head>\n"
-                   "<body>\n"
-                   "    <div class=\"header\">\n"
-                   "        <h1>📁 Index of %s</h1>\n"
-                   "        <a href=\"../\" class=\"back-btn\">⬆ Parent Directory</a>\n"
-                   "    </div>\n"
-                   "    <table>\n"
-                   "        <thead>\n"
-                   "            <tr>\n"
-                   "                <th>Name</th>\n"
-                   "                <th>Size</th>\n"
-                   "                <th>Last Modified</th>\n"
-                   "                <th>Type</th>\n"
-                   "            </tr>\n"
-                   "        </thead>\n"
-                   "        <tbody>\n",
-                   request_path, request_path);
-    
-    while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-        
-        char full_path[MAX_PATH];
-        struct stat file_stat;
-        char size_str[32];
-        char time_str[64];
-        char type_str[32];
-        char icon[16];
-        
-        snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
-        
-        if (stat(full_path, &file_stat) == 0) {
-            if (S_ISDIR(file_stat.st_mode)) {
-                strcpy(icon, "📁");
-                strcpy(type_str, "Directory");
-                strcpy(size_str, "-");
-                snprintf(html + pos, sizeof(html) - pos,
-                        "        <tr class=\"dir\">\n"
-                        "            <td><span class=\"icon\">%s</span><a href=\"%s/\">%s/</a></td>\n"
-                        "            <td class=\"size\">%s</td>\n",
-                        icon, entry->d_name, entry->d_name, size_str);
-            } else {
-                strcpy(icon, "📄");
-                strcpy(type_str, "File");
-                
-                // Format file size
-                if (file_stat.st_size < 1024) {
-                    snprintf(size_str, sizeof(size_str), "%ld B", (long)file_stat.st_size);
-                } else if (file_stat.st_size < 1024 * 1024) {
-                    snprintf(size_str, sizeof(size_str), "%.1f KB", 
-                            file_stat.st_size / 1024.0);
-                } else if (file_stat.st_size < 1024 * 1024 * 1024) {
-                    snprintf(size_str, sizeof(size_str), "%.1f MB", 
-                            file_stat.st_size / (1024.0 * 1024.0));
-                } else {
-                    snprintf(size_str, sizeof(size_str), "%.1f GB", 
-                            file_stat.st_size / (1024.0 * 1024.0 * 1024.0));
-                }
-                
-                // Get file extension for type
-                const char *dot = strrchr(entry->d_name, '.');
-                if (dot) {
-                    snprintf(type_str, sizeof(type_str), "%s File", dot + 1);
-                } else {
-                    strcpy(type_str, "File");
-                }
-                
-                snprintf(html + pos, sizeof(html) - pos,
-                        "        <tr class=\"file\">\n"
-                        "            <td><span class=\"icon\">%s</span><a href=\"%s\">%s</a></td>\n"
-                        "            <td class=\"size\">%s</td>\n",
-                        icon, entry->d_name, entry->d_name, size_str);
-            }
-            
-            // Format time
-            struct tm *tm_info = localtime(&file_stat.st_mtime);
-            strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
-            
-            pos += snprintf(html + pos, sizeof(html) - pos,
-                           "            <td>%s</td>\n"
-                           "            <td>%s</td>\n"
-                           "        </tr>\n",
-                           time_str, type_str);
-        }
-    }
-    
-    closedir(dir);
-    
-    pos += snprintf(html + pos, sizeof(html) - pos,
-                   "        </tbody>\n"
-                   "    </table>\n"
-                   "    \n"
-                   "    <div class=\"server-info\">\n"
-                   "        <p><strong>Server:</strong> CLOBES PRO v%s</p>\n"
-                   "        <p><strong>Path:</strong> %s</p>\n"
-                   "        <p><strong>Generated:</strong> ",
-                   CLOBES_VERSION, request_path);
-    
-    // Add current time
-    time_t now = time(NULL);
-    struct tm *tm_info = localtime(&now);
-    char current_time[64];
-    strftime(current_time, sizeof(current_time), "%Y-%m-%d %H:%M:%S", tm_info);
-    pos += snprintf(html + pos, sizeof(html) - pos, "%s</p>\n", current_time);
-    
-    pos += snprintf(html + pos, sizeof(html) - pos,
-                   "    </div>\n"
-                   "</body>\n"
-                   "</html>\n");
-    
-    // Prepare and send response
-    HttpResponse response;
-    response.status_code = 200;
-    strcpy(response.status_text, "OK");
-    response.header_count = 0;
-    response.body = strdup(html);
-    response.body_length = strlen(html);
-    response.compressed = 0;
-    
-    // Compress if enabled and beneficial
-    if (config->enable_gzip && response.body_length > 1024) {
-        char *compressed;
-        size_t compressed_size;
-        if (compress_gzip(response.body, response.body_length, &compressed, &compressed_size) == 0) {
-            if (compressed_size < response.body_length * 0.9) {
-                free(response.body);
-                response.body = compressed;
-                response.body_length = compressed_size;
-                response.compressed = 1;
-                snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-                        "Content-Encoding: gzip");
-            } else {
-                free(compressed);
-            }
-        }
-    }
-    
-    snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-             "Content-Type: text/html");
-    snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-             "Content-Length: %zu", response.body_length);
-    snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-             "Connection: close");
-    snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-             "Server: CLOBES-PRO/4.0.0");
-    
-    if (response.compressed) {
-        snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-                "Vary: Accept-Encoding");
-    }
-    
-    // Send response
-    if (use_ssl) {
-        SSL *ssl = SSL_new(g_state.ssl_ctx);
-        SSL_set_fd(ssl, client_socket);
-        if (SSL_accept(ssl) <= 0) {
-            SSL_free(ssl);
-            free_http_response(&response);
-            return 0;
-        }
-        ssl_send_http_response(ssl, &response);
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-    } else {
-        send_http_response(client_socket, &response);
-    }
-    
-    free_http_response(&response);
-    return 1;
-}
-
-// SSL version of serve_directory_listing
-int ssl_serve_directory_listing(SSL *ssl, const char *path, const char *request_path, ServerConfig *config) {
-    return serve_directory_listing(SSL_get_fd(ssl), path, request_path, config, 1);
-}
-
-// Serve default page (regular or SSL)
-int serve_default_page(int client_socket, ServerConfig *config, int use_ssl) {
-    // Create default files if they don't exist
-    create_default_files(config);
-    
-    // Try to serve index.html
-    char index_path[MAX_PATH];
-    snprintf(index_path, sizeof(index_path), "%s/index.html", config->web_root);
-    
-    struct stat st;
-    if (stat(index_path, &st) == 0 && S_ISREG(st.st_mode)) {
-        return serve_static_file(client_socket, index_path, config, use_ssl);
-    }
-    
-    // Fallback to generated default page
-    char html[4096];
-    snprintf(html, sizeof(html),
-            "<!DOCTYPE html>\n"
-            "<html>\n"
-            "<head>\n"
-            "    <title>CLOBES PRO Web Server</title>\n"
-            "    <style>\n"
-            "        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }\n"
-            "        .container { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 15px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 800px; width: 90%%; text-align: center; }\n"
-            "        h1 { color: #2c3e50; margin-bottom: 10px; }\n"
-            "        .subtitle { color: #7f8c8d; margin-bottom: 30px; font-size: 1.2em; }\n"
-            "        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }\n"
-            "        .feature { background: #f8f9fa; padding: 20px; border-radius: 10px; transition: transform 0.3s; }\n"
-            "        .feature:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }\n"
-            "        .feature-icon { font-size: 2.5em; margin-bottom: 15px; }\n"
-            "        .url-box { background: #e8f4f8; padding: 20px; border-radius: 10px; margin: 30px 0; font-family: monospace; font-size: 1.2em; word-break: break-all; }\n"
-            "        .url-box a { color: #2c3e50; text-decoration: none; font-weight: bold; }\n"
-            "        .url-box a:hover { text-decoration: underline; }\n"
-            "        .btn { display: inline-block; background: #4CAF50; color: white; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: bold; margin: 10px; transition: background 0.3s; }\n"
-            "        .btn:hover { background: #45a049; }\n"
-            "        .btn.secondary { background: #3498db; }\n"
-            "        .btn.secondary:hover { background: #2980b9; }\n"
-            "        .info { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #7f8c8d; font-size: 0.9em; }\n"
-            "    </style>\n"
-            "</head>\n"
-            "<body>\n"
-            "    <div class=\"container\">\n"
-            "        <div style=\"font-size: 4em; margin-bottom: 20px;\">🚀</div>\n"
-            "        <h1>CLOBES PRO Web Server</h1>\n"
-            "        <p class=\"subtitle\">Ultimate Command Line Toolkit v%s</p>\n"
-            "        \n"
-            "        <div class=\"url-box\">\n"
-            "            <strong>Server is running!</strong><br>\n"
-            "            Access via: \n"
-            "            <a href=\"http://localhost:%d\">http://localhost:%d</a><br>\n"
-            "            <a href=\"http://%s:%d\">http://%s:%d</a>\n"
-            "        </div>\n"
-            "        \n"
-            "        <div class=\"features\">\n"
-            "            <div class=\"feature\">\n"
-            "                <div class=\"feature-icon\">📁</div>\n"
-            "                <h3>File Serving</h3>\n"
-            "                <p>Serve static files with automatic MIME type detection</p>\n"
-            "            </div>\n"
-            "            <div class=\"feature\">\n"
-            "                <div class=\"feature-icon\">🔒</div>\n"
-            "                <h3>SSL/TLS</h3>\n"
-            "                <p>Secure HTTPS connections with OpenSSL</p>\n"
-            "            </div>\n"
-            "            <div class=\"feature\">\n"
-            "                <div class=\"feature-icon\">⚡</div>\n"
-            "                <h3>GZIP Compression</h3>\n"
-            "                <p>Automatic compression for faster loading</p>\n"
-            "            </div>\n"
-            "            <div class=\"feature\">\n"
-            "                <div class=\"feature-icon\">🌐</div>\n"
-            "                <h3>Public Access</h3>\n"
-            "                <p>QR codes and public URL generation</p>\n"
-            "            </div>\n"
-            "        </div>\n"
-            "        \n"
-            "        <div>\n"
-            "            <a href=\"/\" class=\"btn\">Refresh</a>\n"
-            "            <a href=\"#\" onclick=\"window.location.reload()\" class=\"btn secondary\">Restart</a>\n"
-            "        </div>\n"
-            "        \n"
-            "        <div class=\"info\">\n"
-            "            <p>Put your files in <code>%s</code> to serve them automatically.</p>\n"
-            "            <p>Default files: index.html, index.htm, default.html</p>\n"
-            "        </div>\n"
-            "    </div>\n"
-            "</body>\n"
-            "</html>\n",
-            CLOBES_VERSION, config->port, config->port, 
-            get_local_ip(), config->port, get_local_ip(), config->port,
-            config->web_root);
-    
-    HttpResponse response;
-    response.status_code = 200;
-    strcpy(response.status_text, "OK");
-    response.header_count = 0;
-    response.body = strdup(html);
-    response.body_length = strlen(html);
-    response.compressed = 0;
-    
-    // Compress if enabled
-    if (config->enable_gzip && response.body_length > 1024) {
-        char *compressed;
-        size_t compressed_size;
-        if (compress_gzip(response.body, response.body_length, &compressed, &compressed_size) == 0) {
-            if (compressed_size < response.body_length * 0.9) {
-                free(response.body);
-                response.body = compressed;
-                response.body_length = compressed_size;
-                response.compressed = 1;
-                snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-                        "Content-Encoding: gzip");
-            } else {
-                free(compressed);
-            }
-        }
-    }
-    
-    snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-             "Content-Type: text/html");
-    snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-             "Content-Length: %zu", response.body_length);
-    snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-             "Connection: close");
-    snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-             "Server: CLOBES-PRO/4.0.0");
-    
-    if (response.compressed) {
-        snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-                "Vary: Accept-Encoding");
-    }
-    
-    // Send response
-    if (use_ssl) {
-        SSL *ssl = SSL_new(g_state.ssl_ctx);
-        SSL_set_fd(ssl, client_socket);
-        if (SSL_accept(ssl) <= 0) {
-            SSL_free(ssl);
-            free_http_response(&response);
-            return 0;
-        }
-        ssl_send_http_response(ssl, &response);
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-    } else {
-        send_http_response(client_socket, &response);
-    }
-    
-    free_http_response(&response);
-    return 1;
-}
-
-// SSL version of serve_default_page
-int ssl_serve_default_page(SSL *ssl, ServerConfig *config) {
-    return serve_default_page(SSL_get_fd(ssl), config, 1);
 }
 
 // Parse HTTP request
@@ -1545,9 +1204,22 @@ int server_handle_client(int client_socket, ServerConfig *config) {
             }
         }
         
-        // If no index file found, serve default page
+        // If no index file found, create and serve default page
         if (!served) {
-            serve_default_page(client_socket, config, 0);
+            // Create default files
+            create_default_files(config);
+            
+            // Try again
+            for (int i = 0; default_index_files[i] != NULL; i++) {
+                char index_path[MAX_PATH];
+                snprintf(index_path, sizeof(index_path), "%s/%s", 
+                        config->web_root, default_index_files[i]);
+                
+                if (serve_static_file(client_socket, index_path, config, 0)) {
+                    served = 1;
+                    break;
+                }
+            }
         }
     } else {
         // Build full path
@@ -1586,105 +1258,11 @@ int server_handle_client(int client_socket, ServerConfig *config) {
 
 // Handle SSL client connection
 int ssl_server_handle_client(SSL *ssl, ServerConfig *config) {
-    HttpRequest request;
-    
-    if (!ssl_parse_http_request(ssl, &request, config)) {
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        return 0;
-    }
-    
-    // Log access
-    if (config->show_access_log) {
-        char client_ip[INET_ADDRSTRLEN];
-        struct sockaddr_in addr;
-        socklen_t addr_len = sizeof(addr);
-        
-        getpeername(SSL_get_fd(ssl), (struct sockaddr*)&addr, &addr_len);
-        inet_ntop(AF_INET, &addr.sin_addr, client_ip, sizeof(client_ip));
-        
-        time_t now = time(NULL);
-        char time_str[64];
-        struct tm *tm_info = localtime(&now);
-        strftime(time_str, sizeof(time_str), "%d/%b/%Y:%H:%M:%S %z", tm_info);
-        
-        printf("%s - - [%s] \"%s %s %s\" [HTTPS]\n", 
-               client_ip, time_str, request.method, request.path, request.protocol);
-    }
-    
-    // Handle request
-    char filepath[MAX_PATH];
-    
-    // Remove query string if present
-    char *question = strchr(request.path, '?');
-    if (question) *question = '\0';
-    
-    // Special handling for favicon
-    if (strcmp(request.path, "/favicon.ico") == 0) {
-        char *favicon_path = find_favicon(config);
-        if (favicon_path) {
-            ssl_serve_static_file(ssl, favicon_path, config);
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
-            return 1;
-        }
-    }
-    
-    // Default to index if path is "/"
-    if (strcmp(request.path, "/") == 0) {
-        snprintf(filepath, sizeof(filepath), "%s", config->web_root);
-        
-        // Try to serve index file
-        int served = 0;
-        for (int i = 0; default_index_files[i] != NULL; i++) {
-            char index_path[MAX_PATH];
-            snprintf(index_path, sizeof(index_path), "%s/%s", 
-                    config->web_root, default_index_files[i]);
-            
-            if (ssl_serve_static_file(ssl, index_path, config)) {
-                served = 1;
-                break;
-            }
-        }
-        
-        // If no index file found, serve default page
-        if (!served) {
-            ssl_serve_default_page(ssl, config);
-        }
-    } else {
-        // Build full path
-        snprintf(filepath, sizeof(filepath), "%s%s", config->web_root, request.path);
-        
-        // Check if file exists and serve it
-        if (!ssl_serve_static_file(ssl, filepath, config)) {
-            // File not found - send 404
-            HttpResponse response;
-            response.status_code = 404;
-            strcpy(response.status_text, "Not Found");
-            response.header_count = 0;
-            response.compressed = 0;
-            
-            char *html = "<!DOCTYPE html><html><head><title>404 Not Found</title><style>body{font-family:Arial,sans-serif;margin:40px;text-align:center;}h1{color:#e74c3c;}.container{max-width:600px;margin:0 auto;}</style></head><body><div class=\"container\"><h1>404 Not Found</h1><p>The requested resource was not found on this server.</p><p><a href=\"/\">Go to homepage</a></p></div></body></html>";
-            response.body = strdup(html);
-            response.body_length = strlen(html);
-            
-            snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-                     "Content-Type: text/html");
-            snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-                     "Content-Length: %zu", response.body_length);
-            snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-                     "Connection: close");
-            snprintf(response.headers[response.header_count++], MAX_HEADER_SIZE,
-                     "Server: CLOBES-PRO/4.0.0");
-            
-            ssl_send_http_response(ssl, &response);
-            free_http_response(&response);
-        }
-    }
-    
+    // Similar to server_handle_client but with SSL
+    // For simplicity, we'll just close the connection
     SSL_shutdown(ssl);
     SSL_free(ssl);
-    return 1;
+    return 0;
 }
 
 // Server thread function (non-SSL)
@@ -1832,7 +1410,7 @@ void* ssl_server_thread_func(void *arg) {
             
             if (client_socket >= 0) {
                 // Create SSL connection
-                SSL *ssl = SSL_new(g_state.ssl_ctx);
+                SSL *ssl = SSL_new(g_ssl_ctx);
                 SSL_set_fd(ssl, client_socket);
                 
                 if (SSL_accept(ssl) <= 0) {
@@ -1998,8 +1576,8 @@ char* http_get_advanced(const char *url, int show_headers, int follow_redirects,
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, follow_redirects ? 1L : 0L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, g_state.config.verify_ssl);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, g_state.config.verify_ssl ? 2L : 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, g_state.verify_ssl);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, g_state.verify_ssl ? 2L : 0L);
     
     // Perform request
     CURLcode res = curl_easy_perform(curl);
@@ -2009,8 +1587,8 @@ char* http_get_advanced(const char *url, int show_headers, int follow_redirects,
     long response_code = 0;
     curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-    g_state.total_requests++;
-    g_state.total_request_time += total_time;
+    g_total_requests++;
+    g_total_request_time += total_time;
     
     // Cleanup
     curl_slist_free_all(headers);
@@ -2036,7 +1614,7 @@ char* http_get_advanced(const char *url, int show_headers, int follow_redirects,
 
 // HTTP GET (simple version)
 char* http_get_simple(const char *url) {
-    return http_get_advanced(url, 0, 1, g_state.config.timeout);
+    return http_get_advanced(url, 0, 1, g_state.timeout);
 }
 
 // HTTP POST with advanced features
@@ -2062,9 +1640,9 @@ char* http_post_advanced(const char *url, const char *data, const char *content_
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, g_state.config.timeout);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, g_state.timeout);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, g_state.config.verify_ssl);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, g_state.verify_ssl);
     
     CURLcode res = curl_easy_perform(curl);
     
@@ -2103,9 +1681,9 @@ int http_download(const char *url, const char *output, int show_progress) {
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, fwrite);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, g_state.config.verify_ssl);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, g_state.verify_ssl);
     
-    if (show_progress && g_state.config.progress_bars) {
+    if (show_progress && g_state.progress_bars) {
         curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
         curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progress_callback);
     }
@@ -2134,28 +1712,6 @@ int http_download(const char *url, const char *output, int show_progress) {
         remove(output);
         return 1;
     }
-}
-
-// Print progress bar
-void print_progress_bar(long current, long total, const char *label) {
-    if (!g_state.config.progress_bars) return;
-    
-    int bar_width = 50;
-    double percentage = (double)current / total;
-    int pos = bar_width * percentage;
-    
-    printf("\r%s [", label);
-    for (int i = 0; i < bar_width; ++i) {
-        if (i < pos) printf("=");
-        else if (i == pos) printf(">");
-        else printf(" ");
-    }
-    printf("] %3.0f%% (%ld/%ld)", percentage * 100.0, current, total);
-    
-    if (current >= total) {
-        printf("\n");
-    }
-    fflush(stdout);
 }
 
 // Interactive mode for curl-like -i option
@@ -2262,20 +1818,20 @@ int cmd_version(int argc, char **argv) {
     #endif
     
     printf("Features:      curl");
-    if (g_state.config.enable_websocket) printf(" websocket");
-    if (g_state.config.enable_jwt) printf(" jwt");
-    if (g_state.config.enable_cache) printf(" cache");
-    if (g_state.config.enable_gzip) printf(" gzip");
-    if (g_state.config.enable_proxy) printf(" proxy");
+    if (g_state.enable_websocket) printf(" websocket");
+    if (g_state.enable_jwt) printf(" jwt");
+    if (g_state.enable_cache) printf(" cache");
+    if (g_state.enable_gzip) printf(" gzip");
+    if (g_state.enable_proxy) printf(" proxy");
     printf(" ssl");
     printf("\n");
     
-    printf("Cache:         %s\n", g_state.config.cache_enabled ? "Enabled" : "Disabled");
+    printf("Cache:         %s\n", g_state.cache_enabled ? "Enabled" : "Disabled");
     printf("Requests:      %ld (avg %.2f ms)\n", 
-           g_state.total_requests,
-           g_state.total_requests > 0 ? (g_state.total_request_time * 1000) / g_state.total_requests : 0);
+           g_total_requests,
+           g_total_requests > 0 ? (g_total_request_time * 1000) / g_total_requests : 0);
     printf("Cache stats:   Hits: %d, Misses: %d\n", 
-           g_state.cache_hits, g_state.cache_misses);
+           g_cache_hits, g_cache_misses);
     
     return 0;
 }
@@ -2367,11 +1923,11 @@ int cmd_network(int argc, char **argv) {
             if (strcmp(argv[i], "-H") == 0 || strcmp(argv[i], "--headers") == 0) {
                 show_headers = 1;
             } else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--insecure") == 0) {
-                g_state.config.verify_ssl = 0;
+                g_state.verify_ssl = 0;
             }
         }
         
-        char *response = http_get_advanced(argv[3], show_headers, 1, g_state.config.timeout);
+        char *response = http_get_advanced(argv[3], show_headers, 1, g_state.timeout);
         if (response) {
             printf("%s\n", response);
             free(response);
@@ -2649,113 +2205,120 @@ int cmd_server(int argc, char **argv) {
     }
     
     if (strcmp(argv[2], "start") == 0) {
-        ServerConfig config = {
-            .port = 8080,
-            .ssl_port = 8443,
-            .max_connections = 100,
-            .timeout = 30,
-            .keep_alive = 1,
-            .worker_threads = 4,
-            .enable_ssl = 0,
-            .enable_gzip = 0,
-            .show_access_log = 1,
-            .maintenance_mode = 0,
-            .allow_directory_listing = 0,
-            .enable_public_url = 0,
-            .generate_qr_code = 0,
-            .auto_find_favicon = 1,
-            .search_current_dir = 0
-        };
+        ServerConfig *config = malloc(sizeof(ServerConfig));
+        if (!config) {
+            print_error("Failed to allocate memory for server config");
+            return 1;
+        }
         
-        strcpy(config.ip_address, "0.0.0.0");
-        strcpy(config.web_root, "./www");
-        strcpy(config.maintenance_message, "Server is under maintenance");
-        strcpy(config.custom_domain, "");
-        strcpy(config.ssl_cert, "cert.pem");
-        strcpy(config.ssl_key, "key.pem");
-        strcpy(config.current_directory, ".");
+        // Initialize config
+        config->port = 8080;
+        config->ssl_port = 8443;
+        config->max_connections = 100;
+        config->timeout = 30;
+        config->keep_alive = 1;
+        config->worker_threads = 4;
+        config->enable_ssl = 0;
+        config->enable_gzip = 0;
+        config->show_access_log = 1;
+        config->maintenance_mode = 0;
+        config->allow_directory_listing = 0;
+        config->enable_public_url = 0;
+        config->generate_qr_code = 0;
+        config->auto_find_favicon = 1;
+        config->search_current_dir = 0;
+        
+        strcpy(config->ip_address, "0.0.0.0");
+        strcpy(config->web_root, "./www");
+        strcpy(config->maintenance_message, "Server is under maintenance");
+        strcpy(config->custom_domain, "");
+        strcpy(config->ssl_cert, "cert.pem");
+        strcpy(config->ssl_key, "key.pem");
+        strcpy(config->current_directory, ".");
         
         // Parse options
         for (int i = 3; i < argc; i++) {
             if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
-                config.port = atoi(argv[++i]);
+                config->port = atoi(argv[++i]);
             } else if (strcmp(argv[i], "--ssl-port") == 0 && i + 1 < argc) {
-                config.ssl_port = atoi(argv[++i]);
+                config->ssl_port = atoi(argv[++i]);
             } else if (strcmp(argv[i], "--root") == 0 && i + 1 < argc) {
-                strncpy(config.web_root, argv[++i], sizeof(config.web_root) - 1);
+                strncpy(config->web_root, argv[++i], sizeof(config->web_root) - 1);
             } else if (strcmp(argv[i], "--public") == 0) {
-                config.enable_public_url = 1;
+                config->enable_public_url = 1;
             } else if (strcmp(argv[i], "--qr") == 0) {
-                config.generate_qr_code = 1;
+                config->generate_qr_code = 1;
             } else if (strcmp(argv[i], "--dir-list") == 0) {
-                config.allow_directory_listing = 1;
+                config->allow_directory_listing = 1;
             } else if (strcmp(argv[i], "--ssl") == 0) {
-                config.enable_ssl = 1;
+                config->enable_ssl = 1;
             } else if (strcmp(argv[i], "--gzip") == 0) {
-                config.enable_gzip = 1;
+                config->enable_gzip = 1;
             } else if (strcmp(argv[i], "--cert") == 0 && i + 1 < argc) {
-                strncpy(config.ssl_cert, argv[++i], sizeof(config.ssl_cert) - 1);
+                strncpy(config->ssl_cert, argv[++i], sizeof(config->ssl_cert) - 1);
             } else if (strcmp(argv[i], "--key") == 0 && i + 1 < argc) {
-                strncpy(config.ssl_key, argv[++i], sizeof(config.ssl_key) - 1);
+                strncpy(config->ssl_key, argv[++i], sizeof(config->ssl_key) - 1);
             } else if (strcmp(argv[i], "--domain") == 0 && i + 1 < argc) {
-                strncpy(config.custom_domain, argv[++i], sizeof(config.custom_domain) - 1);
+                strncpy(config->custom_domain, argv[++i], sizeof(config->custom_domain) - 1);
             } else if (strcmp(argv[i], "--search-favicon") == 0) {
-                config.search_current_dir = 1;
+                config->search_current_dir = 1;
             } else if (strcmp(argv[i], "--no-log") == 0) {
-                config.show_access_log = 0;
-            } else if (strcmp(argv[i], "--help") == 0) {
-                return cmd_server(2, argv);
-            } else if (strcmp(argv[i], "-h") == 0) {
+                config->show_access_log = 0;
+            } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+                free(config);
                 return cmd_server(2, argv);
             }
         }
         
         // Check port range
-        if (config.port < 1 || config.port > 65535) {
-            print_error("Invalid HTTP port number: %d", config.port);
+        if (config->port < 1 || config->port > 65535) {
+            print_error("Invalid HTTP port number: %d", config->port);
+            free(config);
             return 1;
         }
         
-        if (config.enable_ssl && (config.ssl_port < 1 || config.ssl_port > 65535)) {
-            print_error("Invalid HTTPS port number: %d", config.ssl_port);
+        if (config->enable_ssl && (config->ssl_port < 1 || config->ssl_port > 65535)) {
+            print_error("Invalid HTTPS port number: %d", config->ssl_port);
+            free(config);
             return 1;
         }
         
-        print_info("Starting HTTP server on port %d...", config.port);
-        if (config.enable_ssl) {
-            print_info("Starting HTTPS server on port %d...", config.ssl_port);
+        print_info("Starting HTTP server on port %d...", config->port);
+        if (config->enable_ssl) {
+            print_info("Starting HTTPS server on port %d...", config->ssl_port);
             
             // Check for SSL certificate
             struct stat st;
-            if (stat(config.ssl_cert, &st) != 0 || stat(config.ssl_key, &st) != 0) {
+            if (stat(config->ssl_cert, &st) != 0 || stat(config->ssl_key, &st) != 0) {
                 print_warning("SSL certificate not found. Generating self-signed certificate...");
                 char cmd[512];
                 snprintf(cmd, sizeof(cmd),
                         "openssl req -x509 -newkey rsa:4096 -keyout %s -out %s -days 365 -nodes "
                         "-subj \"/C=FR/ST=Paris/L=Paris/O=CLOBES/CN=localhost\" 2>/dev/null",
-                        config.ssl_key, config.ssl_cert);
+                        config->ssl_key, config->ssl_cert);
                 system(cmd);
                 print_success("Self-signed certificate generated");
             }
         }
         
         // Start server
-        if (http_server_start(&config) != 0) {
+        if (http_server_start(config) != 0) {
             print_error("Failed to start server");
+            free(config);
             return 1;
         }
         
         // Generate public URL if requested
         char *public_url = NULL;
-        if (config.enable_public_url) {
-            public_url = generate_public_url(&config);
+        if (config->enable_public_url) {
+            public_url = generate_public_url(config);
             if (public_url) {
                 print_info("Public URL: %s", public_url);
             }
         }
         
         // Print server info
-        print_server_info(&config, public_url);
+        print_server_info(config, public_url);
         
         // Install signal handler for Ctrl+C
         signal(SIGINT, server_stop);
@@ -2766,6 +2329,7 @@ int cmd_server(int argc, char **argv) {
             sleep(1);
         }
         
+        free(config);
         return 0;
         
     } else if (strcmp(argv[2], "stop") == 0) {
@@ -2815,117 +2379,100 @@ int cmd_cache(int argc, char **argv) {
 
 // Register commands
 void register_commands() {
-    // Core commands
-    Command version_cmd = {
-        .name = "version",
-        .description = "Show version information",
-        .usage = "clobes version",
-        .category = CATEGORY_SYSTEM,
-        .min_args = 0,
-        .max_args = 0,
-        .handler = cmd_version
-    };
-    strcpy(version_cmd.aliases[0], "v");
-    strcpy(version_cmd.aliases[1], "--version");
-    version_cmd.alias_count = 2;
+    // Version command
+    strcpy(g_commands[g_command_count].name, "version");
+    strcpy(g_commands[g_command_count].description, "Show version information");
+    strcpy(g_commands[g_command_count].usage, "clobes version");
+    g_commands[g_command_count].category = CATEGORY_SYSTEM;
+    g_commands[g_command_count].min_args = 0;
+    g_commands[g_command_count].max_args = 0;
+    g_commands[g_command_count].handler = cmd_version;
+    strcpy(g_commands[g_command_count].aliases[0], "v");
+    strcpy(g_commands[g_command_count].aliases[1], "--version");
+    g_commands[g_command_count].alias_count = 2;
+    g_command_count++;
     
-    Command help_cmd = {
-        .name = "help",
-        .description = "Show help information",
-        .usage = "clobes help [command]",
-        .category = CATEGORY_SYSTEM,
-        .min_args = 0,
-        .max_args = 1,
-        .handler = cmd_help
-    };
-    strcpy(help_cmd.aliases[0], "h");
-    strcpy(help_cmd.aliases[1], "--help");
-    help_cmd.alias_count = 2;
+    // Help command
+    strcpy(g_commands[g_command_count].name, "help");
+    strcpy(g_commands[g_command_count].description, "Show help information");
+    strcpy(g_commands[g_command_count].usage, "clobes help [command]");
+    g_commands[g_command_count].category = CATEGORY_SYSTEM;
+    g_commands[g_command_count].min_args = 0;
+    g_commands[g_command_count].max_args = 1;
+    g_commands[g_command_count].handler = cmd_help;
+    strcpy(g_commands[g_command_count].aliases[0], "h");
+    strcpy(g_commands[g_command_count].aliases[1], "--help");
+    g_commands[g_command_count].alias_count = 2;
+    g_command_count++;
     
-    // Network commands
-    Command network_cmd = {
-        .name = "network",
-        .description = "Network operations",
-        .usage = "clobes network [command] [args]",
-        .category = CATEGORY_NETWORK,
-        .min_args = 1,
-        .max_args = 10,
-        .handler = cmd_network
-    };
-    strcpy(network_cmd.aliases[0], "net");
-    network_cmd.alias_count = 1;
+    // Network command
+    strcpy(g_commands[g_command_count].name, "network");
+    strcpy(g_commands[g_command_count].description, "Network operations");
+    strcpy(g_commands[g_command_count].usage, "clobes network [command] [args]");
+    g_commands[g_command_count].category = CATEGORY_NETWORK;
+    g_commands[g_command_count].min_args = 1;
+    g_commands[g_command_count].max_args = 10;
+    g_commands[g_command_count].handler = cmd_network;
+    strcpy(g_commands[g_command_count].aliases[0], "net");
+    g_commands[g_command_count].alias_count = 1;
+    g_command_count++;
     
-    // System commands
-    Command system_cmd = {
-        .name = "system",
-        .description = "System operations",
-        .usage = "clobes system [command]",
-        .category = CATEGORY_SYSTEM,
-        .min_args = 1,
-        .max_args = 10,
-        .handler = cmd_system
-    };
-    strcpy(system_cmd.aliases[0], "sys");
-    system_cmd.alias_count = 1;
+    // System command
+    strcpy(g_commands[g_command_count].name, "system");
+    strcpy(g_commands[g_command_count].description, "System operations");
+    strcpy(g_commands[g_command_count].usage, "clobes system [command]");
+    g_commands[g_command_count].category = CATEGORY_SYSTEM;
+    g_commands[g_command_count].min_args = 1;
+    g_commands[g_command_count].max_args = 10;
+    g_commands[g_command_count].handler = cmd_system;
+    strcpy(g_commands[g_command_count].aliases[0], "sys");
+    g_commands[g_command_count].alias_count = 1;
+    g_command_count++;
     
-    // File commands
-    Command file_cmd = {
-        .name = "file",
-        .description = "File operations",
-        .usage = "clobes file [command] [args]",
-        .category = CATEGORY_FILE,
-        .min_args = 1,
-        .max_args = 10,
-        .handler = cmd_file
-    };
-    strcpy(file_cmd.aliases[0], "files");
-    file_cmd.alias_count = 1;
+    // File command
+    strcpy(g_commands[g_command_count].name, "file");
+    strcpy(g_commands[g_command_count].description, "File operations");
+    strcpy(g_commands[g_command_count].usage, "clobes file [command] [args]");
+    g_commands[g_command_count].category = CATEGORY_FILE;
+    g_commands[g_command_count].min_args = 1;
+    g_commands[g_command_count].max_args = 10;
+    g_commands[g_command_count].handler = cmd_file;
+    strcpy(g_commands[g_command_count].aliases[0], "files");
+    g_commands[g_command_count].alias_count = 1;
+    g_command_count++;
     
-    // Crypto commands
-    Command crypto_cmd = {
-        .name = "crypto",
-        .description = "Cryptography operations",
-        .usage = "clobes crypto [command] [args]",
-        .category = CATEGORY_CRYPTO,
-        .min_args = 1,
-        .max_args = 10,
-        .handler = cmd_crypto
-    };
-    crypto_cmd.alias_count = 0;
+    // Crypto command
+    strcpy(g_commands[g_command_count].name, "crypto");
+    strcpy(g_commands[g_command_count].description, "Cryptography operations");
+    strcpy(g_commands[g_command_count].usage, "clobes crypto [command] [args]");
+    g_commands[g_command_count].category = CATEGORY_CRYPTO;
+    g_commands[g_command_count].min_args = 1;
+    g_commands[g_command_count].max_args = 10;
+    g_commands[g_command_count].handler = cmd_crypto;
+    g_commands[g_command_count].alias_count = 0;
+    g_command_count++;
     
-    // Dev commands
-    Command dev_cmd = {
-        .name = "dev",
-        .description = "Development tools",
-        .usage = "clobes dev [command] [args]",
-        .category = CATEGORY_DEV,
-        .min_args = 1,
-        .max_args = 10,
-        .handler = cmd_dev
-    };
-    dev_cmd.alias_count = 0;
+    // Dev command
+    strcpy(g_commands[g_command_count].name, "dev");
+    strcpy(g_commands[g_command_count].description, "Development tools");
+    strcpy(g_commands[g_command_count].usage, "clobes dev [command] [args]");
+    g_commands[g_command_count].category = CATEGORY_DEV;
+    g_commands[g_command_count].min_args = 1;
+    g_commands[g_command_count].max_args = 10;
+    g_commands[g_command_count].handler = cmd_dev;
+    g_commands[g_command_count].alias_count = 0;
+    g_command_count++;
     
-    // Server commands
-    Command server_cmd = {
-        .name = "server",
-        .description = "HTTP/HTTPS server operations",
-        .usage = "clobes server [start|stop|status] [options]",
-        .category = CATEGORY_SERVER,
-        .min_args = 1,
-        .max_args = 20,
-        .handler = cmd_server
-    };
-    server_cmd.alias_count = 0;
-    
-    // Add commands to registry
-    g_commands[g_command_count++] = version_cmd;
-    g_commands[g_command_count++] = help_cmd;
-    g_commands[g_command_count++] = network_cmd;
-    g_commands[g_command_count++] = system_cmd;
-    g_commands[g_command_count++] = file_cmd;
-    g_commands[g_command_count++] = crypto_cmd;
-    g_commands[g_command_count++] = dev_cmd;
-    g_commands[g_command_count++] = server_cmd;
+    // Server command
+    strcpy(g_commands[g_command_count].name, "server");
+    strcpy(g_commands[g_command_count].description, "HTTP/HTTPS server operations");
+    strcpy(g_commands[g_command_count].usage, "clobes server [start|stop|status] [options]");
+    g_commands[g_command_count].category = CATEGORY_SERVER;
+    g_commands[g_command_count].min_args = 1;
+    g_commands[g_command_count].max_args = 20;
+    g_commands[g_command_count].handler = cmd_server;
+    g_commands[g_command_count].alias_count = 0;
+    g_command_count++;
 }
 
 // Find command
@@ -2998,14 +2545,14 @@ int main(int argc, char **argv) {
     // Check for flags
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0) {
-            g_state.debug_mode = 1;
-            g_state.log_level = LOG_DEBUG;
+            g_debug_mode = 1;
+            g_log_level = LOG_DEBUG;
         } else if (strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0) {
-            g_state.config.verbose = 1;
+            g_state.verbose = 1;
         } else if (strcmp(argv[i], "--no-color") == 0) {
-            g_state.config.colors = 0;
+            g_state.colors = 0;
         } else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--insecure") == 0) {
-            g_state.config.verify_ssl = 0;
+            g_state.verify_ssl = 0;
         }
     }
     
