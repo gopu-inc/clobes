@@ -141,7 +141,20 @@ typedef struct {
     char current_directory[MAX_PATH];
 } ServerConfig;
 
-// Configuration
+// Command structure
+typedef struct Command {
+    char name[32];
+    char description[256];
+    char usage[512];
+    Category category;
+    int min_args;
+    int max_args;
+    int (*handler)(int, char**);
+    char aliases[5][16];
+    int alias_count;
+} Command;
+
+// Global state - structure modifiée pour avoir les champs directement
 typedef struct {
     int timeout;
     int cache_enabled;
@@ -150,17 +163,11 @@ typedef struct {
     int colors;
     int progress_bars;
     int verbose;
-    // New features
     int enable_websocket;
     int enable_jwt;
     int enable_cache;
     int enable_gzip;
     int enable_proxy;
-} Config;
-
-// Global state
-typedef struct {
-    Config config;
     int cache_hits;
     int cache_misses;
     long total_requests;
